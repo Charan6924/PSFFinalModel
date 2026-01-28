@@ -1,0 +1,15 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+MTF_1D_Plots/
+MTF_Results_Output/
+MTFTools-main/examples/
+Code/training_output/
+Code/__pycache__/
