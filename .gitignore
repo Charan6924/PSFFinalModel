@@ -11,5 +11,10 @@ wheels/
 MTF_1D_Plots/
 MTF_Results_Output/
 MTFTools-main/examples/
-Code/training_output/
+Code/training_output_0.7/
+Code/training_output_0.5/
 Code/__pycache__/
+MTF_Results_Output/
+Code/training_output_0.5_no_clamp/
+MTFTools-main/
+PSD_Results_Output/

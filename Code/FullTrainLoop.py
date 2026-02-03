@@ -2,19 +2,16 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 from PSDDataset import PSDDataset
-from Dataset import MTFDataset
+from Dataset import MTFPSDDataset
 from SplineEstimator import KernelEstimator
 from utils import (
     generate_images, 
     get_torch_spline, 
-    radial_mtf_to_2d_otf,
     save_checkpoint,
     load_checkpoint,
     compute_gradient_norm,
     plot_training_metrics, 
-    validate,
-    get_scipy_spline, plot_images_for_epoch, plot_splines_for_epoch, setup_logging
-)
+    validate, compute_psd, plot_images_for_epoch, plot_splines_for_epoch, setup_logging, spline_to_kernel)
 from pathlib import Path
 from tqdm import tqdm
 import json
@@ -22,11 +19,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import logging
 from datetime import datetime
-
-
-
-
-
+from itertools import cycle
 
 def train_epoch(model, image_loader, mtf_loader, optimizer, scaler, l1_loss, alpha, device, logger):
     """Train for one epoch"""
@@ -37,11 +30,10 @@ def train_epoch(model, image_loader, mtf_loader, optimizer, scaler, l1_loss, alp
     total_mtf_loss = 0.0
     total_grad_norm = 0.0
     num_batches = 0
+    nan_batches = 0
     
-    image_iter = iter(image_loader)
-    mtf_iter = iter(mtf_loader)
-    
-    num_iters = max(len(image_loader), len(mtf_loader))
+    # Use cycle for MTF data - more efficient
+    mtf_cycle = cycle(mtf_loader)
     
     # Variables to store last batch for visualization
     last_I_smooth = None
@@ -56,62 +48,45 @@ def train_epoch(model, image_loader, mtf_loader, optimizer, scaler, l1_loss, alp
     last_control_phantom = None
     last_target_mtfs = None
     
-    for batch_idx in tqdm(range(num_iters), desc="Training", unit="batch"):
-        # Get image batch
-        try:
-            I_smooth, I_sharp, psd_smooth, psd_sharp = next(image_iter)
-        except StopIteration:
-            image_iter = iter(image_loader)
-            I_smooth, I_sharp, psd_smooth, psd_sharp = next(image_iter)
-        
+    for batch_idx, (I_smooth, I_sharp) in enumerate(
+        tqdm(image_loader, desc="Training", unit="batch")
+    ):
         I_smooth = I_smooth.to(device, non_blocking=True)
         I_sharp = I_sharp.to(device, non_blocking=True)
-        psd_smooth = psd_smooth.to(device, non_blocking=True)
-        psd_sharp = psd_sharp.to(device, non_blocking=True)
-        
-        # Forward pass with autocast
+        with torch.no_grad():
+                psd_sharp = compute_psd(I_sharp,device='cuda')
+                psd_smooth = compute_psd(I_smooth,device='cuda')
+                psd_smooth = psd_smooth.to(device, non_blocking=True)
+                psd_sharp = psd_sharp.to(device, non_blocking=True)
+
+
         with torch.amp.autocast('cuda', dtype=torch.bfloat16, enabled=(device == "cuda")): #type: ignore
-            # Image reconstruction
-            knots_smooth, control_smooth = model(psd_smooth)
-            knots_sharp, control_sharp = model(psd_sharp)
+            smooth_knots, smooth_control_points = model(psd_smooth)
+            sharp_knots,sharp_control_points = model(psd_sharp)
             
-            mtf_smooth = get_torch_spline(knots_smooth, control_smooth)
-            mtf_sharp = get_torch_spline(knots_sharp, control_sharp)
+            otf_smooth_to_sharp_grid,otf_sharp_to_smooth_grid = spline_to_kernel(smooth_knots=smooth_knots,smooth_control_points=smooth_control_points,sharp_control_points=sharp_control_points,sharp_knots=sharp_knots)
             
-            otf_smooth_2d = radial_mtf_to_2d_otf(mtf_smooth, I_smooth.shape[-2:], device)
-            otf_sharp_2d = radial_mtf_to_2d_otf(mtf_sharp, I_sharp.shape[-2:], device)
-            
-            I_gen_sharp, I_gen_smooth = generate_images(I_smooth, I_sharp, otf_smooth_2d, otf_sharp_2d)
-            
-            recon_loss_smooth = l1_loss(I_gen_smooth, I_smooth)
-            recon_loss_sharp = l1_loss(I_gen_sharp, I_sharp)
+            I_generated_sharp,I_generated_smooth = generate_images(I_smooth=I_smooth,I_sharp=I_sharp,otf_sharp_to_smooth_grid=otf_sharp_to_smooth_grid,otf_smooth_to_sharp_grid=otf_smooth_to_sharp_grid)
+            recon_loss_smooth = l1_loss(I_generated_smooth, I_smooth)
+            recon_loss_sharp = l1_loss(I_generated_sharp, I_sharp)
             recon_loss = (recon_loss_smooth + recon_loss_sharp) / 2.0
             
-            # Get MTF batch
-            try:
-                input_profiles, target_mtfs = next(mtf_iter)
-            except StopIteration:
-                mtf_iter = iter(mtf_loader)
-                input_profiles, target_mtfs = next(mtf_iter)
-            
-            input_profiles = input_profiles.to(device, non_blocking=True).unsqueeze(1)
+            input_profiles, target_mtfs = next(mtf_cycle)
+            input_profiles = input_profiles.to(device, non_blocking=True)
             target_mtfs = target_mtfs.to(device, non_blocking=True)
-            
-            # MTF supervision
+
             knots_phantom, control_phantom = model(input_profiles)
-            mtf_phantom = get_torch_spline(knots_phantom, control_phantom).squeeze(1)
+            mtf_phantom = get_torch_spline(knots_phantom, control_phantom, num_points=64).squeeze(1)
             
             mtf_loss = l1_loss(mtf_phantom, target_mtfs)
-            
-            # Combined loss
             batch_loss = alpha * recon_loss + (1 - alpha) * mtf_loss
         
-        # Backward pass
         optimizer.zero_grad(set_to_none=True)
         
         if scaler:
             scaler.scale(batch_loss).backward()
             scaler.unscale_(optimizer)
+            
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             grad_norm = compute_gradient_norm(model)
             scaler.step(optimizer)
@@ -129,32 +104,29 @@ def train_epoch(model, image_loader, mtf_loader, optimizer, scaler, l1_loss, alp
         total_grad_norm += grad_norm
         num_batches += 1
         
-        # Log batch details
-        logger.info(f"  Batch [{batch_idx + 1}/{num_iters}] - "
-                   f"Loss: {batch_loss.item():.6f}, "
-                   f"Recon: {recon_loss.item():.6f}, "
-                   f"MTF: {mtf_loss.item():.6f}, "
-                   f"Grad: {grad_norm:.4f}")
-        
         # Store last batch for visualization
         last_I_smooth = I_smooth.detach()
         last_I_sharp = I_sharp.detach()
-        last_I_gen_sharp = I_gen_sharp.detach()
-        last_I_gen_smooth = I_gen_smooth.detach()
-        last_knots_smooth = knots_smooth.detach()
-        last_control_smooth = control_smooth.detach()
-        last_knots_sharp = knots_sharp.detach()
-        last_control_sharp = control_sharp.detach()
+        last_I_gen_sharp = I_generated_sharp.detach()
+        last_I_gen_smooth = I_generated_smooth.detach()
+        last_knots_smooth = smooth_knots.detach()
+        last_control_smooth = smooth_control_points.detach()
+        last_knots_sharp = sharp_knots.detach()
+        last_control_sharp = sharp_control_points.detach()
         last_knots_phantom = knots_phantom.detach()
         last_control_phantom = control_phantom.detach()
         last_target_mtfs = target_mtfs.detach()
     
+    if nan_batches > 0:
+        logger.warning(f"Epoch summary: {nan_batches} batches skipped due to NaN/Inf")
+    
     # Return metrics and last batch data for visualization
     return {
-        'total_loss': total_loss / num_batches,
-        'recon_loss': total_recon_loss / num_batches,
-        'mtf_loss': total_mtf_loss / num_batches,
-        'grad_norm': total_grad_norm / num_batches
+        'total_loss': total_loss / max(num_batches, 1),
+        'recon_loss': total_recon_loss / max(num_batches, 1),
+        'mtf_loss': total_mtf_loss / max(num_batches, 1),
+        'grad_norm': total_grad_norm / max(num_batches, 1),
+        'nan_batches': nan_batches
     }, {
         'I_smooth': last_I_smooth,
         'I_sharp': last_I_sharp,
@@ -171,21 +143,24 @@ def train_epoch(model, image_loader, mtf_loader, optimizer, scaler, l1_loss, alp
 
 
 def main():
-    # ========================================
-    # CONFIGURATION
-    # ========================================
     IMAGE_ROOT_DIR = r"D:\Charan work file\KernelEstimator\Data_Root"
     MTF_DATASET_PATH = r"D:\Charan work file\PhantomTesting\training_dataset.npz"
-    OUTPUT_DIR = Path("training_output")
+    ALPHA = 0.5
+    OUTPUT_DIR = Path(f"training_output_{ALPHA}")
     CHECKPOINT_DIR = OUTPUT_DIR / "checkpoints"
     VIS_IMAGES_DIR = OUTPUT_DIR / "visualization" / "images"
     VIS_SPLINES_DIR = OUTPUT_DIR / "visualization" / "splines"
     BATCH_SIZE = 16
-    NUM_WORKERS = 4
+    NUM_WORKERS = 0
     LEARNING_RATE = 1e-4
-    ALPHA = 0.5
-    NUM_EPOCHS = 100
+    NUM_EPOCHS = 150
     RESUME = False
+    
+    # Scheduler configuration
+    SCHEDULER_FACTOR = 0.5
+    SCHEDULER_PATIENCE = 5
+    SCHEDULER_MIN_LR = 1e-7
+    
     OUTPUT_DIR.mkdir(exist_ok=True)
     CHECKPOINT_DIR.mkdir(exist_ok=True)
     VIS_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
@@ -195,36 +170,37 @@ def main():
     
     # Print to terminal (concise)
     print("="*70)
-    print(f"Training Configuration")
+    print(f"Training Configuration [OPTIMIZED VERSION]")
     print(f"Device: {device}")
     print(f"Batch Size: {BATCH_SIZE}")
     print(f"Learning Rate: {LEARNING_RATE}")
+    print(f"LR Scheduler: ReduceLROnPlateau (factor={SCHEDULER_FACTOR}, patience={SCHEDULER_PATIENCE})")
     print(f"Alpha: {ALPHA}")
     print(f"Epochs: {NUM_EPOCHS}")
     print("="*70)
+    
     logger.info("="*70)
-    logger.info(f"Training Configuration")
+    logger.info(f"Training Configuration [OPTIMIZED VERSION]")
     logger.info(f"Device: {device}")
     logger.info(f"Batch Size: {BATCH_SIZE}")
     logger.info(f"Num Workers: {NUM_WORKERS}")
     logger.info(f"Learning Rate: {LEARNING_RATE}")
+    logger.info(f"LR Scheduler: ReduceLROnPlateau")
+    logger.info(f"  - Factor: {SCHEDULER_FACTOR}")
+    logger.info(f"  - Patience: {SCHEDULER_PATIENCE}")
+    logger.info(f"  - Min LR: {SCHEDULER_MIN_LR}")
     logger.info(f"Alpha: {ALPHA}")
     logger.info(f"Epochs: {NUM_EPOCHS}")
     logger.info(f"Resume: {RESUME}")
-    logger.info(f"Output Directory: {OUTPUT_DIR}")
-    logger.info(f"Checkpoint Directory: {CHECKPOINT_DIR}")
-    logger.info(f"Visualization - Images: {VIS_IMAGES_DIR}")
-    logger.info(f"Visualization - Splines: {VIS_SPLINES_DIR}")
+    logger.info(f"NaN Protection: ENABLED")
     logger.info("="*70)
+    
     print("\nLoading datasets...")
     logger.info("\nLoading datasets...")
     
     # Image dataset
-    image_dataset = PSDDataset(
-        root_dir=r"D:\Charan work file\KernelEstimator\Data_Root",
-        sampling_strategy='all',
-        use_ct_windowing=True,
-    )
+    data_root = r"D:\Charan work file\KernelEstimator\Data_Root"
+    image_dataset = PSDDataset(root_dir=data_root, preload=True)
     
     image_train_size = int(0.9 * len(image_dataset))
     image_val_size = len(image_dataset) - image_train_size
@@ -236,8 +212,9 @@ def main():
     )
     
     # MTF dataset
-    mtf_dataset = MTFDataset(MTF_DATASET_PATH)
-    
+    mtf_folder = r"D:\Charan work file\PhantomTesting\MTF_Results_Output"
+    psd_folder = r"D:\Charan work file\PhantomTesting\PSD_Results_Output"
+    mtf_dataset = MTFPSDDataset(mtf_folder, psd_folder, verbose=False)
     mtf_train_size = int(0.8 * len(mtf_dataset))
     mtf_val_size = len(mtf_dataset) - mtf_train_size
     
@@ -247,21 +224,27 @@ def main():
         generator=torch.Generator().manual_seed(42)
     )
     
-    # Create dataloaders
     image_train_loader = DataLoader(
-        image_train_dataset, batch_size=BATCH_SIZE, shuffle=True, 
-        num_workers=NUM_WORKERS, pin_memory=True
+        image_train_dataset, 
+        batch_size=BATCH_SIZE, 
+        shuffle=True, 
+        num_workers=0,
+        pin_memory=True,
     )
+
     image_val_loader = DataLoader(
-        image_val_dataset, batch_size=BATCH_SIZE, shuffle=False,
-        num_workers=NUM_WORKERS, pin_memory=True
+        image_val_dataset, 
+        batch_size=BATCH_SIZE, 
+        shuffle=False,
+        num_workers=0,
+        pin_memory=True,
     )
     
     mtf_train_loader = DataLoader(
-        mtf_train_dataset, batch_size=BATCH_SIZE, shuffle=True
+        mtf_train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0
     )
     mtf_val_loader = DataLoader(
-        mtf_val_dataset, batch_size=BATCH_SIZE, shuffle=False
+        mtf_val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=0
     )
     
     print(f"Image - Train: {len(image_train_dataset)} | Val: {len(image_val_dataset)}")
@@ -269,27 +252,26 @@ def main():
     
     logger.info(f"Image Dataset - Train: {len(image_train_dataset)}, Val: {len(image_val_dataset)}")
     logger.info(f"MTF Dataset   - Train: {len(mtf_train_dataset)}, Val: {len(mtf_val_dataset)}")
-    logger.info(f"Image Train Batches: {len(image_train_loader)}")
-    logger.info(f"Image Val Batches: {len(image_val_loader)}")
-    logger.info(f"MTF Train Batches: {len(mtf_train_loader)}")
-    logger.info(f"MTF Val Batches: {len(mtf_val_loader)}")
     
-    # ========================================
-    # INITIALIZE MODEL
-    # ========================================
     model = KernelEstimator().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, 
+        mode='min',
+        factor=SCHEDULER_FACTOR,
+        patience=SCHEDULER_PATIENCE,
+        min_lr=SCHEDULER_MIN_LR
+    )
+    
     scaler = torch.amp.GradScaler('cuda') if device == "cuda" else None #type: ignore
     l1_loss = nn.L1Loss()
     
-    # Count parameters
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f"\nModel Parameters:")
     logger.info(f"  Total: {total_params:,}")
     logger.info(f"  Trainable: {trainable_params:,}")
     
-    # Metrics tracking
     metrics = {
         'epoch': [],
         'train_total_loss': [],
@@ -298,13 +280,14 @@ def main():
         'train_grad_norm': [],
         'val_total_loss': [],
         'val_recon_loss': [],
-        'val_mtf_loss': []
+        'val_mtf_loss': [],
+        'learning_rate': [],
+        'nan_batches': []
     }
     
     start_epoch = 0
     best_val_loss = float('inf')
     
-    # Resume from checkpoint if requested
     if RESUME:
         checkpoint_path = CHECKPOINT_DIR / "latest_checkpoint.pth"
         loaded = load_checkpoint(checkpoint_path, model, optimizer, scaler)
@@ -312,14 +295,14 @@ def main():
             start_epoch = loaded['epoch'] + 1
             metrics = loaded['metrics']
             best_val_loss = loaded['best_val_loss']
+            
+            if 'scheduler_state_dict' in loaded:
+                scheduler.load_state_dict(loaded['scheduler_state_dict'])
+            
             print(f"Resumed from epoch {loaded['epoch']}")
             print(f"Best validation loss: {best_val_loss:.6f}")
-            logger.info(f"Resumed training from epoch {loaded['epoch']}")
-            logger.info(f"Best validation loss so far: {best_val_loss:.6f}")
+            print(f"Current learning rate: {optimizer.param_groups[0]['lr']:.2e}")
     
-    # ========================================
-    # TRAINING LOOP
-    # ========================================
     print("\n" + "="*70)
     print(f"Starting training from epoch {start_epoch + 1}")
     print("="*70 + "\n")
@@ -330,14 +313,14 @@ def main():
     
     for epoch in range(start_epoch, NUM_EPOCHS):
         epoch_num = epoch + 1
+        current_lr = optimizer.param_groups[0]['lr']
         
-        # Terminal output (concise)
-        print(f"Epoch [{epoch_num}/{NUM_EPOCHS}]")
+        print(f"Epoch [{epoch_num}/{NUM_EPOCHS}] - LR: {current_lr:.2e}")
         print("-"*70)
         
-        # Log file output (detailed)
         logger.info(f"\n{'='*70}")
         logger.info(f"EPOCH {epoch_num}/{NUM_EPOCHS}")
+        logger.info(f"Learning Rate: {current_lr:.2e}")
         logger.info(f"{'='*70}")
         
         # Train
@@ -354,7 +337,14 @@ def main():
             l1_loss, ALPHA, device
         )
         
-        logger.info(f"Validation Complete - Total Loss: {val_metrics['total_loss']:.6f}")
+        # Step scheduler
+        scheduler.step(val_metrics['total_loss'])
+        
+        # Check if LR was reduced
+        new_lr = optimizer.param_groups[0]['lr']
+        if new_lr < current_lr:
+            print(f"*** Learning rate reduced: {current_lr:.2e} -> {new_lr:.2e} ***")
+            logger.info(f"*** Learning rate reduced: {current_lr:.2e} -> {new_lr:.2e} ***")
         
         # Update metrics
         metrics['epoch'].append(epoch_num)
@@ -365,22 +355,25 @@ def main():
         metrics['val_total_loss'].append(val_metrics['total_loss'])
         metrics['val_recon_loss'].append(val_metrics['recon_loss'])
         metrics['val_mtf_loss'].append(val_metrics['mtf_loss'])
+        metrics['learning_rate'].append(new_lr)
+        metrics['nan_batches'].append(train_metrics.get('nan_batches', 0))
         
-        # Print summary to terminal (concise)
+        # Print summary
         print(f"[TRAIN] Total: {train_metrics['total_loss']:.6f} | "
               f"Recon: {train_metrics['recon_loss']:.6f} | "
               f"MTF: {train_metrics['mtf_loss']:.6f} | "
-              f"Grad: {train_metrics['grad_norm']:.4f}")
+              f"Grad: {train_metrics['grad_norm']:.4f} | "
+              f"NaN: {train_metrics.get('nan_batches', 0)}")
         print(f"[VAL]   Total: {val_metrics['total_loss']:.6f} | "
               f"Recon: {val_metrics['recon_loss']:.6f} | "
               f"MTF: {val_metrics['mtf_loss']:.6f}")
         
-        # Log summary to file (detailed)
         logger.info(f"\nEpoch {epoch_num} Summary:")
         logger.info(f"  [TRAIN] Total Loss: {train_metrics['total_loss']:.6f}")
         logger.info(f"  [TRAIN] Recon Loss: {train_metrics['recon_loss']:.6f}")
         logger.info(f"  [TRAIN] MTF Loss: {train_metrics['mtf_loss']:.6f}")
         logger.info(f"  [TRAIN] Grad Norm: {train_metrics['grad_norm']:.4f}")
+        logger.info(f"  [TRAIN] NaN Batches: {train_metrics.get('nan_batches', 0)}")
         logger.info(f"  [VAL]   Total Loss: {val_metrics['total_loss']:.6f}")
         logger.info(f"  [VAL]   Recon Loss: {val_metrics['recon_loss']:.6f}")
         logger.info(f"  [VAL]   MTF Loss: {val_metrics['mtf_loss']:.6f}")
@@ -388,7 +381,6 @@ def main():
         # Visualizations
         logger.info("\nGenerating visualizations...")
         try:
-            # Plot images
             img_path = plot_images_for_epoch(
                 vis_data['I_smooth'],
                 vis_data['I_sharp'],
@@ -399,7 +391,6 @@ def main():
             )
             logger.info(f"  Images saved: {img_path}")
             
-            # Plot splines
             spline_path = plot_splines_for_epoch(
                 vis_data['knots_smooth'],
                 vis_data['control_smooth'],
@@ -424,43 +415,51 @@ def main():
             print(f"New best model! Val Loss: {best_val_loss:.6f}")
             logger.info(f"NEW BEST MODEL - Val Loss: {best_val_loss:.6f}")
         
-        save_checkpoint(
-            epoch_num, model, optimizer, scaler, metrics, 
-            best_val_loss, ALPHA, LEARNING_RATE, CHECKPOINT_DIR, is_best
-        )
-        logger.info(f"Checkpoint saved (is_best={is_best})")
+        checkpoint = {
+            'epoch': epoch_num,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'scheduler_state_dict': scheduler.state_dict(),
+            'scaler_state_dict': scaler.state_dict() if scaler else None,
+            'metrics': metrics,
+            'best_val_loss': best_val_loss,
+            'alpha': ALPHA,
+            'learning_rate': LEARNING_RATE
+        }
         
+        torch.save(checkpoint, CHECKPOINT_DIR / f"epoch_{epoch+1}_checkpoint.pth")
+        
+        if is_best:
+            torch.save(checkpoint, CHECKPOINT_DIR / "best_checkpoint.pth")
+        
+        logger.info(f"Checkpoint saved (is_best={is_best})")
         print("-"*70 + "\n")
     
-    # ========================================
-    # FINAL SUMMARY
-    # ========================================
+    # Final summary
     best_epoch = metrics['epoch'][metrics['val_total_loss'].index(min(metrics['val_total_loss']))]
+    final_lr = optimizer.param_groups[0]['lr']
     
     print("="*70)
     print("TRAINING COMPLETE!")
     print(f"Best Validation Loss: {best_val_loss:.6f}")
     print(f"Best Epoch: {best_epoch}")
+    print(f"Final Learning Rate: {final_lr:.2e}")
     print("="*70)
     
     logger.info("\n" + "="*70)
     logger.info("TRAINING COMPLETE!")
     logger.info(f"Best Validation Loss: {best_val_loss:.6f}")
     logger.info(f"Best Epoch: {best_epoch}")
-    logger.info(f"Total Epochs Trained: {NUM_EPOCHS}")
+    logger.info(f"Final Learning Rate: {final_lr:.2e}")
     logger.info("="*70)
     
     # Save metrics
     metrics_path = OUTPUT_DIR / "metrics.json"
     with open(metrics_path, 'w') as f:
         json.dump(metrics, f, indent=2)
-    print(f"Metrics saved to {metrics_path}")
-    logger.info(f"Metrics saved to {metrics_path}")
     
     # Plot metrics
     plot_training_metrics(metrics, ALPHA, LEARNING_RATE, OUTPUT_DIR)
-    print(f"Plots saved to {OUTPUT_DIR / 'training_metrics.png'}")
-    logger.info(f"Training metrics plot saved to {OUTPUT_DIR / 'training_metrics.png'}")
 
 
 if __name__ == "__main__":
