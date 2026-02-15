@@ -53,10 +53,6 @@ def spline_to_kernel(smooth_knots, smooth_control_points, sharp_knots, sharp_con
 
     return otf_smooth_to_sharp_grid, otf_sharp_to_smooth_grid
 
-
-
-
-
 if __name__ == "__main__":
     BATCH_SIZE = 1
     device = 'cuda'

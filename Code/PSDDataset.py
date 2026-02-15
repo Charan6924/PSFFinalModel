@@ -108,7 +108,7 @@ class PSDDataset(Dataset):
         cache = {}
         for path in tqdm(sorted(unique_paths), desc="Loading volumes"):
             try:
-                cache[path] = nib.load(path).get_fdata()
+                cache[path] = nib.load(path).get_fdata()  #type: ignore
             except Exception as e:
                 print(f"\nFailed to load {os.path.basename(path)}: {e}")
         
@@ -126,7 +126,7 @@ class PSDDataset(Dataset):
                 if self.preload:
                     n_slices = self.volume_cache[s_path].shape[2]
                 else:
-                    n_slices = nib.load(s_path).shape[2]
+                    n_slices = nib.load(s_path).shape[2] #type: ignore
                 start_idx = int(n_slices * self.min_percentile)
                 end_idx = int(n_slices * self.max_percentile)
 
@@ -148,7 +148,7 @@ class PSDDataset(Dataset):
         if path in self.volume_cache:
             return self.volume_cache[path]
         
-        vol = nib.load(path).get_fdata()
+        vol = nib.load(path).get_fdata()  #type: ignore
         if not self.preload:
             self.volume_cache[path] = vol
         return vol
@@ -163,145 +163,55 @@ class PSDDataset(Dataset):
         """
         info = self.slice_data[idx]
         
-        # Get volumes (from cache if preloaded)
         vol_s = self._get_volume(info['smooth_path'])
         vol_h = self._get_volume(info['sharp_path'])
+        img_s = vol_s[:, :, info['slice_idx']].copy()
+        img_h = vol_h[:, :, info['slice_idx']].copy()
+
+        #img_s = (img_s - img_s.min()) / (img_s.max() - img_s.min() + 1e-8)
+        #img_h = (img_h - img_h.min()) / (img_h.max() - img_h.min() + 1e-8)
+        img_s = np.clip(img_s,-1000,3000)
+        img_h = np.clip(img_h,-1000,3000)
+        img_s = (img_s + 1000) / (4000)
+        img_h = (img_h + 1000) / (4000)
+
+        I_smooth_1 = torch.from_numpy(img_s).unsqueeze(0).float()
+        I_sharp_1 = torch.from_numpy(img_h).unsqueeze(0).float()
         
-        # Extract slice
+        idx_2 = np.random.randint(0, len(self.slice_data))
+        I_smooth_2, I_sharp_2 = self._get_slice_pair(idx_2)
+        
+        return I_smooth_1, I_sharp_1, I_smooth_2, I_sharp_2
+    def _get_slice_pair(self, idx):
+        """
+        Get a pair of smooth and sharp images for a given index.
+        
+        Args:
+            idx: Index into slice_data
+            
+        Returns:
+            tuple: (I_smooth, I_sharp) - normalized image tensors
+        """
+        info = self.slice_data[idx]
+        
+        vol_s = self._get_volume(info['smooth_path'])
+        vol_h = self._get_volume(info['sharp_path'])
         img_s = vol_s[:, :, info['slice_idx']].copy()
         img_h = vol_h[:, :, info['slice_idx']].copy()
         
         # Normalize
-        img_s = (img_s - img_s.min()) / (img_s.max() - img_s.min() + 1e-8)
-        img_h = (img_h - img_h.min()) / (img_h.max() - img_h.min() + 1e-8)
-        
-        # Convert to tensors
+        #img_s = (img_s - img_s.min()) / (img_s.max() - img_s.min() + 1e-8)
+        #img_h = (img_h - img_h.min()) / (img_h.max() - img_h.min() + 1e-8)
+        img_s = np.clip(img_s,-1000,3000)
+        img_h = np.clip(img_h,-1000,3000)
+        img_s = (img_s + 1000) / (4000)
+        img_h = (img_h + 1000) / (4000)
+
         I_smooth = torch.from_numpy(img_s).unsqueeze(0).float()
         I_sharp = torch.from_numpy(img_h).unsqueeze(0).float()
         
         return I_smooth, I_sharp
-
+    
     def __len__(self):
         return len(self.slice_data)
 
-
-def benchmark_dataloader(data_root):
-    """
-    Benchmark the fixed dataloader that computes PSD on GPU in the training loop.
-    """
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    print("="*80)
-    print("BENCHMARKING FIXED DATALOADER")
-    print("="*80)
-    print(f"Device: {device}")
-    print()
-    
-    # Initialize dataset
-    dataset = PSDDataset(root_dir=data_root, preload=True)
-    
-    # Create dataloader - NO custom collate needed, just default stacking
-    dataloader = DataLoader(
-        dataset,
-        batch_size=64,
-        shuffle=True,
-        num_workers=0,
-        pin_memory=True,
-    )
-
-    print("\nTesting dataloader output...")
-    I_smooth, I_sharp = next(iter(dataloader))
-    
-    print(f"I_smooth shape: {I_smooth.shape}")
-    print(f"I_sharp shape: {I_sharp.shape}")
-    print(f"Tensors on device: {I_smooth.device} (CPU - will be moved to GPU in training loop)")
-    
-    # Move to GPU and compute PSD
-    print("\nMoving to GPU and computing PSD...")
-    transfer_start = time.time()
-    I_smooth_gpu = I_smooth.to(device, non_blocking=True)
-    I_sharp_gpu = I_sharp.to(device, non_blocking=True)
-    if device == "cuda":
-        torch.cuda.synchronize()
-    transfer_time = time.time() - transfer_start
-    
-    psd_start = time.time()
-    psd_smooth = compute_psd_batch_gpu(I_smooth_gpu, device)
-    psd_sharp = compute_psd_batch_gpu(I_sharp_gpu, device)
-    if device == "cuda":
-        torch.cuda.synchronize()
-    psd_time = time.time() - psd_start
-    
-    print(f"  Transfer to GPU: {transfer_time:.4f}s")
-    print(f"  PSD computation: {psd_time:.4f}s")
-    print(f"  Total: {transfer_time + psd_time:.4f}s")
-    print(f"  psd_smooth shape: {psd_smooth.shape}")
-    print(f"  psd_sharp shape: {psd_sharp.shape}")
-    
-    print("\n" + "="*80)
-    print("Running 20 batch benchmark...")
-    print("="*80)
-    
-    times = []
-    transfer_times = []
-    psd_times = []
-    total_start = time.time()
-    
-    for i, (I_s, I_h) in enumerate(dataloader):
-        if i >= 20:
-            break
-        
-        batch_start = time.time()
-        
-        # Move to GPU
-        transfer_start = time.time()
-        I_s = I_s.to(device, non_blocking=True)
-        I_h = I_h.to(device, non_blocking=True)
-        if device == "cuda":
-            torch.cuda.synchronize()
-        transfer_time = time.time() - transfer_start
-        transfer_times.append(transfer_time)
-        
-        # Compute PSD on GPU
-        psd_compute_start = time.time()
-        psd_s = compute_psd_batch_gpu(I_s, device)
-        psd_h = compute_psd_batch_gpu(I_h, device)
-        if device == "cuda":
-            torch.cuda.synchronize()
-        psd_compute_time = time.time() - psd_compute_start
-        psd_times.append(psd_compute_time)
-        
-        # Dummy operation
-        _ = I_s.mean()
-        
-        batch_time = time.time() - batch_start
-        times.append(batch_time)
-        
-        if i == 0:
-            print(f"\nFirst batch breakdown:")
-            print(f"  Transfer: {transfer_time:.4f}s")
-            print(f"  PSD:      {psd_compute_time:.4f}s")
-            print(f"  Total:    {batch_time:.4f}s")
-    
-    total_time = time.time() - total_start
-    avg_time = np.mean(times)
-    avg_transfer = np.mean(transfer_times)
-    avg_psd_time = np.mean(psd_times)
-    
-    print(f"\n" + "="*80)
-    print("RESULTS")
-    print("="*80)
-    print(f"Average batch time:      {avg_time:.4f}s")
-    print(f"  - Transfer to GPU:     {avg_transfer:.4f}s ({avg_transfer/avg_time*100:.1f}%)")
-    print(f"  - PSD computation:     {avg_psd_time:.4f}s ({avg_psd_time/avg_time*100:.1f}%)")
-    print(f"Total time (20 batches): {total_time:.2f}s")
-    print(f"Throughput:              {64 * 20 / total_time:.1f} images/sec")
-    print("="*80)
-    
-    if device == "cuda":
-        print(f"\nGPU Memory: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
-
-
-if __name__ == "__main__":
-    DATA_PATH = r"D:\Charan work file\KernelEstimator\Data_Root"
-    benchmark_dataloader(DATA_PATH)

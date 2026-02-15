@@ -185,27 +185,47 @@ def validate(model, image_loader, mtf_loader, l1_loss, alpha, device):
     
     for batch_idx in range(num_iters):
         try:
-            I_smooth, I_sharp = next(image_iter)
+            I_smooth_1, I_sharp_1, I_smooth_2, I_sharp_2 = next(image_iter)  # FIX: Unpack 4 values
         except StopIteration:
             break
         
-        I_smooth = I_smooth.to(device, non_blocking=True)
-        I_sharp = I_sharp.to(device, non_blocking=True)
-        with torch.no_grad():
-            psd_smooth = compute_psd(I_smooth,device='cuda')
-            psd_sharp = compute_psd(I_sharp,device='cuda')
-            psd_smooth = psd_smooth.to('cuda')
-            psd_sharp = psd_sharp.to('cuda')
-
-        smooth_knots, smooth_control_points = model(psd_smooth)
-        sharp_knots,sharp_control_points = model(psd_sharp) 
-        otf_smooth_to_sharp_grid,otf_sharp_to_smooth_grid = spline_to_kernel(smooth_knots=smooth_knots,smooth_control_points=smooth_control_points,sharp_control_points=sharp_control_points,sharp_knots=sharp_knots)
-        I_generated_sharp,I_generated_smooth = generate_images(I_smooth=I_smooth,I_sharp=I_sharp,otf_sharp_to_smooth_grid=otf_sharp_to_smooth_grid,otf_smooth_to_sharp_grid=otf_smooth_to_sharp_grid)
+        I_smooth_1 = I_smooth_1.to(device, non_blocking=True)
+        I_sharp_1 = I_sharp_1.to(device, non_blocking=True)
+        I_smooth_2 = I_smooth_2.to(device, non_blocking=True)
+        I_sharp_2 = I_sharp_2.to(device, non_blocking=True)
         
-        recon_loss_smooth = l1_loss(I_generated_smooth, I_smooth)
-        recon_loss_sharp = l1_loss(I_generated_sharp, I_sharp)
+        # Compute PSD
+        psd_smooth_1 = compute_psd(I_smooth_1, device='cuda')
+        psd_sharp_2 = compute_psd(I_sharp_2, device='cuda')
+        psd_smooth_1 = psd_smooth_1.to(device, non_blocking=True)
+        psd_sharp_2 = psd_sharp_2.to(device, non_blocking=True)
+
+        # Get spline parameters
+        smooth_knots_1, smooth_control_points_1 = model(psd_smooth_1)
+        sharp_knots_2, sharp_control_points_2 = model(psd_sharp_2)
+        
+        # Generate OTF grids
+        otf_smooth_to_sharp_grid, otf_sharp_to_smooth_grid = spline_to_kernel(
+            smooth_knots=smooth_knots_1,
+            smooth_control_points=smooth_control_points_1,
+            sharp_control_points=sharp_control_points_2,
+            sharp_knots=sharp_knots_2
+        )
+        
+        # Generate converted images
+        I_generated_sharp, I_generated_smooth = generate_images(
+            I_smooth=I_smooth_1,
+            I_sharp=I_sharp_2,
+            otf_sharp_to_smooth_grid=otf_sharp_to_smooth_grid,
+            otf_smooth_to_sharp_grid=otf_smooth_to_sharp_grid
+        )
+        
+        # Compute reconstruction losses
+        recon_loss_smooth = l1_loss(I_generated_smooth, I_smooth_2)  # FIX: Compare to I_smooth_2
+        recon_loss_sharp = l1_loss(I_generated_sharp, I_sharp_1)      # FIX: Compare to I_sharp_1
         recon_loss = (recon_loss_smooth + recon_loss_sharp) / 2.0
         
+        # MTF loss
         try:
             input_profiles, target_mtfs = next(mtf_iter)
         except StopIteration:
@@ -425,6 +445,9 @@ def generate_images(I_smooth, I_sharp, otf_smooth_to_sharp_grid, otf_sharp_to_sm
         
     I_generated_sharp = I_generated_sharp_real
     I_generated_smooth = I_generated_smooth_real
+
+    I_generated_sharp = torch.clamp(I_generated_sharp, 0, 1)
+    I_generated_smooth = torch.clamp(I_generated_smooth, 0, 1)
             
     return I_generated_sharp, I_generated_smooth
 
@@ -535,7 +558,6 @@ def get_torch_spline(knots, control_points, num_points=64):
 def compute_psd(image, device):
     with torch.no_grad():
         batch_psd = []
-        
         for b in range(image.shape[0]):
             slice_data = image[b, 0, :, :] 
             slice_ft = torch.fft.fftshift(torch.fft.fft2(slice_data))
@@ -580,10 +602,16 @@ def spline_to_kernel(smooth_knots, smooth_control_points, sharp_knots, sharp_con
     
     smooth_spline_curve = smooth_spline_curve.view(batch_size, 1, num_spline_points, 1)
     sharp_spline_curve = sharp_spline_curve.view(batch_size, 1, num_spline_points, 1)
-    otf_smooth_to_sharp = smooth_spline_curve / (sharp_spline_curve + 1e-10)
-    otf_sharp_to_smooth = sharp_spline_curve / (smooth_spline_curve + 1e-10)
+    
+    epsilon = 1e-3
+    
+    otf_smooth_to_sharp = smooth_spline_curve / (sharp_spline_curve + epsilon)
+    otf_sharp_to_smooth = sharp_spline_curve / (smooth_spline_curve + epsilon)
 
-    grid_x = 2.0 * t - 1.0  # [H, W]
+    otf_smooth_to_sharp = torch.clamp(otf_smooth_to_sharp, 0.0, 2.0)
+    otf_sharp_to_smooth = torch.clamp(otf_sharp_to_smooth, 0.0, 2.0)
+
+    grid_x = 2.0 * t - 1.0
     grid_y = torch.zeros_like(grid_x)
     sampling_grid = torch.stack([grid_x, grid_y], dim=-1).unsqueeze(0)
     sampling_grid = sampling_grid.expand(batch_size, -1, -1, -1)
@@ -602,6 +630,6 @@ def spline_to_kernel(smooth_knots, smooth_control_points, sharp_knots, sharp_con
         mode='bilinear',
         padding_mode='border',
         align_corners=True
-    ).squeeze(1) 
+    ).squeeze(1)
 
     return otf_smooth_to_sharp_grid, otf_sharp_to_smooth_grid

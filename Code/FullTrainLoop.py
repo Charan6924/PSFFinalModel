@@ -48,27 +48,44 @@ def train_epoch(model, image_loader, mtf_loader, optimizer, scaler, l1_loss, alp
     last_control_phantom = None
     last_target_mtfs = None
     
-    for batch_idx, (I_smooth, I_sharp) in enumerate(
+    for batch_idx, (I_smooth_1, I_sharp_1,I_smooth_2,I_sharp_2) in enumerate(
         tqdm(image_loader, desc="Training", unit="batch")
     ):
-        I_smooth = I_smooth.to(device, non_blocking=True)
-        I_sharp = I_sharp.to(device, non_blocking=True)
+        I_smooth_1 = I_smooth_1.to(device, non_blocking=True)
+        I_sharp_1 = I_sharp_1.to(device, non_blocking=True)
+        I_smooth_2 = I_smooth_2.to(device, non_blocking=True)
+        I_sharp_2 = I_sharp_2.to(device, non_blocking=True)
         with torch.no_grad():
-                psd_sharp = compute_psd(I_sharp,device='cuda')
-                psd_smooth = compute_psd(I_smooth,device='cuda')
-                psd_smooth = psd_smooth.to(device, non_blocking=True)
-                psd_sharp = psd_sharp.to(device, non_blocking=True)
+                psd_sharp_1 = compute_psd(I_sharp_1,device='cuda')
+                psd_smooth_1 = compute_psd(I_smooth_1,device='cuda')
+                psd_sharp_2 = compute_psd(I_sharp_2,device='cuda')
+                psd_smooth_2 = compute_psd(I_smooth_2,device='cuda')
+                psd_smooth_1 = psd_smooth_1.to(device, non_blocking=True)
+                psd_sharp_1 = psd_sharp_1.to(device, non_blocking=True)
+                psd_smooth_2 = psd_smooth_2.to(device, non_blocking=True)
+                psd_sharp_2 = psd_sharp_2.to(device, non_blocking=True)
 
 
         with torch.amp.autocast('cuda', dtype=torch.bfloat16, enabled=(device == "cuda")): #type: ignore
-            smooth_knots, smooth_control_points = model(psd_smooth)
-            sharp_knots,sharp_control_points = model(psd_sharp)
+            smooth_knots_1, smooth_control_points_1 = model(psd_smooth_1)
+            sharp_knots_2, sharp_control_points_2 = model(psd_sharp_2)
             
-            otf_smooth_to_sharp_grid,otf_sharp_to_smooth_grid = spline_to_kernel(smooth_knots=smooth_knots,smooth_control_points=smooth_control_points,sharp_control_points=sharp_control_points,sharp_knots=sharp_knots)
+            otf_smooth_to_sharp_grid, otf_sharp_to_smooth_grid = spline_to_kernel(
+                smooth_knots=smooth_knots_1,
+                smooth_control_points=smooth_control_points_1,
+                sharp_control_points=sharp_control_points_2,
+                sharp_knots=sharp_knots_2
+            )
             
-            I_generated_sharp,I_generated_smooth = generate_images(I_smooth=I_smooth,I_sharp=I_sharp,otf_sharp_to_smooth_grid=otf_sharp_to_smooth_grid,otf_smooth_to_sharp_grid=otf_smooth_to_sharp_grid)
-            recon_loss_smooth = l1_loss(I_generated_smooth, I_smooth)
-            recon_loss_sharp = l1_loss(I_generated_sharp, I_sharp)
+            I_generated_sharp, I_generated_smooth = generate_images(
+                I_smooth=I_smooth_1,
+                I_sharp=I_sharp_2, 
+                otf_sharp_to_smooth_grid=otf_sharp_to_smooth_grid,
+                otf_smooth_to_sharp_grid=otf_smooth_to_sharp_grid
+            )
+            
+            recon_loss_smooth = l1_loss(I_generated_smooth, I_smooth_2) 
+            recon_loss_sharp = l1_loss(I_generated_sharp, I_sharp_1)    
             recon_loss = (recon_loss_smooth + recon_loss_sharp) / 2.0
             
             input_profiles, target_mtfs = next(mtf_cycle)
@@ -80,6 +97,12 @@ def train_epoch(model, image_loader, mtf_loader, optimizer, scaler, l1_loss, alp
             
             mtf_loss = l1_loss(mtf_phantom, target_mtfs)
             batch_loss = alpha * recon_loss + (1 - alpha) * mtf_loss
+
+        if batch_idx == 0:
+            print(f"Input range: [{I_smooth_1.min():.3f}, {I_smooth_1.max():.3f}]")
+            print(f"Generated sharp range: [{I_generated_sharp.min():.3f}, {I_generated_sharp.max():.3f}]")
+            print(f"Generated smooth range: [{I_generated_smooth.min():.3f}, {I_generated_smooth.max():.3f}]")
+            print(f"Target range: [{I_sharp_1.min():.3f}, {I_sharp_1.max():.3f}]")
         
         optimizer.zero_grad(set_to_none=True)
         
@@ -97,22 +120,20 @@ def train_epoch(model, image_loader, mtf_loader, optimizer, scaler, l1_loss, alp
             grad_norm = compute_gradient_norm(model)
             optimizer.step()
         
-        # Accumulate metrics
         total_loss += batch_loss.item()
         total_recon_loss += recon_loss.item()
         total_mtf_loss += mtf_loss.item()
         total_grad_norm += grad_norm
         num_batches += 1
-        
-        # Store last batch for visualization
-        last_I_smooth = I_smooth.detach()
-        last_I_sharp = I_sharp.detach()
+    
+        last_I_smooth = I_smooth_1.detach()
+        last_I_sharp = I_sharp_2.detach()  
         last_I_gen_sharp = I_generated_sharp.detach()
         last_I_gen_smooth = I_generated_smooth.detach()
-        last_knots_smooth = smooth_knots.detach()
-        last_control_smooth = smooth_control_points.detach()
-        last_knots_sharp = sharp_knots.detach()
-        last_control_sharp = sharp_control_points.detach()
+        last_knots_smooth = smooth_knots_1.detach()  
+        last_control_smooth = smooth_control_points_1.detach()  
+        last_knots_sharp = sharp_knots_2.detach() 
+        last_control_sharp = sharp_control_points_2.detach()  
         last_knots_phantom = knots_phantom.detach()
         last_control_phantom = control_phantom.detach()
         last_target_mtfs = target_mtfs.detach()
