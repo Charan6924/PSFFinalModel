@@ -55,7 +55,7 @@ def reconstruct_volume(sample, model, device, output_dir):
     for k in range(num_slices):
         s_slice = data_smooth[:, :, k].copy()
         h_slice = data_sharp[:, :, k].copy()
-        s_slice = np.clip(s_slice, -1000, 3000)  # ADD THIS
+        s_slice = np.clip(s_slice, -1000, 3000)
         h_slice = np.clip(h_slice, -1000, 3000)
         s_slice_norm = (s_slice + 1000) / (4000)
         h_slice_norm = (h_slice + 1000) / (4000)
@@ -68,24 +68,15 @@ def reconstruct_volume(sample, model, device, output_dir):
             smooth_knots, smooth_control = model(cur_smooth_psd)
             sharp_knots, sharp_control = model(cur_sharp_psd)
 
-            otf_smooth_to_sharp_grid, otf_sharp_to_smooth_grid = spline_to_kernel(
-                smooth_knots=smooth_knots, 
-                smooth_control_points=smooth_control,
-                sharp_control_points=sharp_control, 
-                sharp_knots=sharp_knots
-            )
-
-            I_gen_sharp, I_gen_smooth = generate_images(
-                I_smooth=I_smooth_tensor, 
-                I_sharp=I_sharp_tensor,
-                otf_sharp_to_smooth_grid=otf_sharp_to_smooth_grid,
-                otf_smooth_to_sharp_grid=otf_smooth_to_sharp_grid
-            )
-
+            filter_smooth2sharp, filter_sharp2smooth = spline_to_kernel(smooth_knots=smooth_knots,smooth_control_points=smooth_control,sharp_knots=sharp_knots,sharp_control_points=sharp_control,grid_size=512)
+            I_gen_sharp, I_gen_smooth = generate_images(I_smooth=I_smooth_tensor,I_sharp=I_sharp_tensor,filter_smooth2sharp=filter_smooth2sharp,filter_sharp2smooth=filter_sharp2smooth,device=device)
+            
         res_sharp = I_gen_sharp.detach().cpu().numpy().squeeze()
         res_smooth = I_gen_smooth.detach().cpu().numpy().squeeze()
         vol_generated_sharp[:, :, k] = (res_sharp * 4000) + -1000
         vol_generated_smooth[:, :, k] = (res_smooth * 4000) + -1000
+        vol_generated_sharp[:, :, k] = vol_generated_sharp[:, :, k].clip(-1000,3000)
+        vol_generated_smooth[:, :, k] = vol_generated_smooth[:, :, k].clip(-1000,3000)
 
     nii_generated_sharp = nib.Nifti1Image(vol_generated_sharp, sample['sharp_affine'], sample['sharp_header']) #type: ignore
     nii_generated_smooth = nib.Nifti1Image(vol_generated_smooth, sample['smooth_affine'], sample['smooth_header'])  #type: ignore

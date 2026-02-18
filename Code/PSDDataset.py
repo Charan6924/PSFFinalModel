@@ -141,7 +141,7 @@ class PSDDataset(Dataset):
         I_smooth_1, I_sharp_1 = self._get_slice_pair(idx)
         current_vol_path = self.slice_data[idx]['smooth_path']
         available_indices = self.volume_to_indices[current_vol_path]
-        idx_2 = np.random.choice(available_indices)
+        idx_2 = idx
         I_smooth_2, I_sharp_2 = self._get_slice_pair(idx_2)
         
         return I_smooth_1, I_sharp_1, I_smooth_2, I_sharp_2

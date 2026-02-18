@@ -6,6 +6,7 @@ import os
 import matplotlib.pyplot as plt
 from pathlib import Path
 import logging, datetime
+from itertools import cycle
 
 def plot_images_for_epoch(I_smooth, I_sharp, I_gen_sharp, I_gen_smooth, epoch, output_dir):
     """
@@ -170,86 +171,63 @@ def plot_splines_for_epoch(knots_smooth, control_smooth, knots_sharp, control_sh
 
 @torch.no_grad()
 def validate(model, image_loader, mtf_loader, l1_loss, alpha, device):
-    """Validation loop"""
     model.eval()
-    
-    total_loss = 0.0
-    total_recon_loss = 0.0
-    total_mtf_loss = 0.0
-    num_batches = 0
-    
-    image_iter = iter(image_loader)
-    mtf_iter = iter(mtf_loader)
-    
-    num_iters = min(len(image_loader), len(mtf_loader))
-    
-    for batch_idx in range(num_iters):
-        try:
-            I_smooth_1, I_sharp_1, I_smooth_2, I_sharp_2 = next(image_iter)  # FIX: Unpack 4 values
-        except StopIteration:
-            break
-        
-        I_smooth_1 = I_smooth_1.to(device, non_blocking=True)
-        I_sharp_1 = I_sharp_1.to(device, non_blocking=True)
-        I_smooth_2 = I_smooth_2.to(device, non_blocking=True)
-        I_sharp_2 = I_sharp_2.to(device, non_blocking=True)
-        
-        # Compute PSD
-        psd_smooth_1 = compute_psd(I_smooth_1, device='cuda')
-        psd_sharp_2 = compute_psd(I_sharp_2, device='cuda')
-        psd_smooth_1 = psd_smooth_1.to(device, non_blocking=True)
-        psd_sharp_2 = psd_sharp_2.to(device, non_blocking=True)
 
-        # Get spline parameters
+    total_loss       = 0.0
+    total_recon_loss = 0.0
+    total_mtf_loss   = 0.0
+    num_batches      = 0
+
+    mtf_cycle = cycle(mtf_loader)
+
+    for batch_idx, (I_smooth_1, I_sharp_1, I_smooth_2, I_sharp_2) in enumerate(image_loader):
+        I_smooth_1 = I_smooth_1.to(device, non_blocking=True)
+        I_sharp_1  = I_sharp_1.to(device, non_blocking=True)
+        I_smooth_2 = I_smooth_2.to(device, non_blocking=True)
+        I_sharp_2  = I_sharp_2.to(device, non_blocking=True)
+
+        psd_smooth_1 = compute_psd(I_smooth_1, device='cuda').to(device, non_blocking=True)
+        psd_sharp_2  = compute_psd(I_sharp_2,  device='cuda').to(device, non_blocking=True)
+
         smooth_knots_1, smooth_control_points_1 = model(psd_smooth_1)
-        sharp_knots_2, sharp_control_points_2 = model(psd_sharp_2)
-        
-        # Generate OTF grids
-        otf_smooth_to_sharp_grid, otf_sharp_to_smooth_grid = spline_to_kernel(
-            smooth_knots=smooth_knots_1,
-            smooth_control_points=smooth_control_points_1,
-            sharp_control_points=sharp_control_points_2,
-            sharp_knots=sharp_knots_2
+        sharp_knots_2,  sharp_control_points_2  = model(psd_sharp_2)
+
+        filter_smooth2sharp, filter_sharp2smooth = spline_to_kernel(
+            smooth_knots=smooth_knots_1, smooth_control_points=smooth_control_points_1,
+            sharp_knots=sharp_knots_2,   sharp_control_points=sharp_control_points_2,
+            grid_size=512
         )
-        
-        # Generate converted images
+
         I_generated_sharp, I_generated_smooth = generate_images(
-            I_smooth=I_smooth_1,
-            I_sharp=I_sharp_2,
-            otf_sharp_to_smooth_grid=otf_sharp_to_smooth_grid,
-            otf_smooth_to_sharp_grid=otf_smooth_to_sharp_grid
+            I_smooth=I_smooth_1, I_sharp=I_sharp_2,
+            filter_smooth2sharp=filter_smooth2sharp,
+            filter_sharp2smooth=filter_sharp2smooth,
+            device=device
         )
-        
-        # Compute reconstruction losses
-        recon_loss_smooth = l1_loss(I_generated_smooth, I_smooth_2)  # FIX: Compare to I_smooth_2
-        recon_loss_sharp = l1_loss(I_generated_sharp, I_sharp_1)      # FIX: Compare to I_sharp_1
-        recon_loss = (recon_loss_smooth + recon_loss_sharp) / 2.0
-        
-        # MTF loss
-        try:
-            input_profiles, target_mtfs = next(mtf_iter)
-        except StopIteration:
-            break
-        
+
+        recon_loss_smooth = l1_loss(I_generated_smooth, I_smooth_2)
+        recon_loss_sharp  = l1_loss(I_generated_sharp,  I_sharp_1)
+        recon_loss        = (recon_loss_smooth + recon_loss_sharp) / 2.0
+
+        input_profiles, target_mtfs = next(mtf_cycle)
         input_profiles = input_profiles.to(device, non_blocking=True)
-        target_mtfs = target_mtfs.to(device, non_blocking=True)
-        
+        target_mtfs    = target_mtfs.to(device, non_blocking=True)
+
         knots_phantom, control_phantom = model(input_profiles)
         mtf_phantom = get_torch_spline(knots_phantom, control_phantom, num_points=64).squeeze(1)
-        
-        mtf_loss = l1_loss(mtf_phantom, target_mtfs)
-        
+        mtf_loss    = l1_loss(mtf_phantom, target_mtfs)
+
         batch_loss = alpha * recon_loss + (1 - alpha) * mtf_loss
-        
-        total_loss += batch_loss.item()
+
+        total_loss       += batch_loss.item()
         total_recon_loss += recon_loss.item()
-        total_mtf_loss += mtf_loss.item()
-        num_batches += 1
-    
+        total_mtf_loss   += mtf_loss.item()
+        num_batches      += 1
+
     return {
-        'total_loss': total_loss / num_batches,
-        'recon_loss': total_recon_loss / num_batches,
-        'mtf_loss': total_mtf_loss / num_batches
+        'total_loss': total_loss       / max(num_batches, 1),
+        'recon_loss': total_recon_loss  / max(num_batches, 1),
+        'mtf_loss':   total_mtf_loss    / max(num_batches, 1)
     }
 
 def save_checkpoint(epoch, model, optimizer, scaler, metrics, best_val_loss, 
@@ -427,28 +405,22 @@ Hyperparameters:
     
     print(f"✓ Training metrics plot saved to {plot_path}")
 
-def generate_images(I_smooth, I_sharp, otf_smooth_to_sharp_grid, otf_sharp_to_smooth_grid, epsilon=1e-10,device = 'cuda'):
+def generate_images(I_smooth, I_sharp, filter_smooth2sharp, filter_sharp2smooth, device='cuda'):
     fft_smooth = compute_fft(I_smooth, device=device)
-    fft_sharp = compute_fft(I_sharp, device=device)
-            
-    fft_generated_sharp = fft_smooth * otf_smooth_to_sharp_grid
-    fft_generated_smooth = fft_sharp * otf_sharp_to_smooth_grid
-            
-    fft_generated_sharp_unshifted = torch.fft.ifftshift(fft_generated_sharp)
-    fft_generated_smooth_unshifted = torch.fft.ifftshift(fft_generated_smooth)
-            
-    I_generated_sharp = torch.fft.ifft2(fft_generated_sharp_unshifted)
-    I_generated_smooth = torch.fft.ifft2(fft_generated_smooth_unshifted)
-            
-    I_generated_sharp_real = I_generated_sharp.real
-    I_generated_smooth_real = I_generated_smooth.real
-        
-    I_generated_sharp = I_generated_sharp_real
-    I_generated_smooth = I_generated_smooth_real
+    fft_sharp  = compute_fft(I_sharp,  device=device)
 
-    I_generated_sharp = torch.clamp(I_generated_sharp, 0, 1)
+    fft_generated_sharp  = fft_smooth * filter_smooth2sharp
+    fft_generated_smooth = fft_sharp  * filter_sharp2smooth
+
+    fft_generated_sharp_unshifted  = torch.fft.ifftshift(fft_generated_sharp,  dim=(-2, -1))
+    fft_generated_smooth_unshifted = torch.fft.ifftshift(fft_generated_smooth, dim=(-2, -1))
+
+    I_generated_sharp  = torch.fft.ifft2(fft_generated_sharp_unshifted,  dim=(-2, -1)).real
+    I_generated_smooth = torch.fft.ifft2(fft_generated_smooth_unshifted, dim=(-2, -1)).real
+
+    I_generated_sharp  = torch.clamp(I_generated_sharp,  0, 1)
     I_generated_smooth = torch.clamp(I_generated_smooth, 0, 1)
-            
+
     return I_generated_sharp, I_generated_smooth
 
 
