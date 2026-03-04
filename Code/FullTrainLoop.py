@@ -9,7 +9,7 @@ from utils import (
     generate_images, get_torch_spline, save_checkpoint, load_checkpoint,
     compute_gradient_norm, plot_training_metrics, validate, compute_psd,
     plot_images_for_epoch, plot_splines_for_epoch, setup_logging,
-    spline_to_kernel, compute_ratios
+    spline_to_kernel, compute_ratios, compute_fft
 )
 from pathlib import Path
 from tqdm import tqdm
@@ -18,9 +18,12 @@ import json
 import numpy as np
 import logging
 from datetime import datetime
+import matplotlib.pyplot as plt
 
+filters_dir = Path("filters")
+filters_dir.mkdir(exist_ok=True)
 
-def train_one_epoch(model, image_loader, mtf_loader, optimizer, scaler, l1_loss, alpha, device, logger):
+def train_one_epoch(model, image_loader, mtf_loader, optimizer, scaler, l1_loss, alpha, device, logger, epoch):
     model.train()
 
     running_loss = 0.0
@@ -51,6 +54,8 @@ def train_one_epoch(model, image_loader, mtf_loader, optimizer, scaler, l1_loss,
         with torch.no_grad():
             psd_smooth = compute_psd(I_smooth_1, device='cuda').to(device, non_blocking=True)
             psd_sharp  = compute_psd(I_sharp_2,  device='cuda').to(device, non_blocking=True)
+            I_smooth_fft = compute_fft(I_smooth_1)
+            I_sharp_fft = compute_fft(I_sharp_1)
 
         with torch.amp.autocast('cuda', dtype=torch.bfloat16, enabled=(device == 'cuda')):
             smooth_knots, smooth_cp = model(psd_smooth)
@@ -76,28 +81,11 @@ def train_one_epoch(model, image_loader, mtf_loader, optimizer, scaler, l1_loss,
             knots_mtf, cp_mtf = model(input_profiles)
             pred_mtf = get_torch_spline(knots_mtf, cp_mtf, num_points=target_mtfs.shape[-1]).squeeze(1)
             mtf_loss = l1_loss(pred_mtf, target_mtfs)
-            real_s2sh, real_sh2s = compute_ratios(psd_smooth, psd_sharp)
+            real_s2sh, real_sh2s = compute_ratios(I_sharp_fft=I_sharp_fft,I_smooth_fft=I_smooth_fft)
             ft_loss = torch.abs(real_sh2s - filt_sh2s) + torch.abs(real_s2sh - filt_s2sh)
             ft_loss = torch.log(ft_loss.mean() + 1)
 
-            
-            if i == 0:
-                logger.info("Filter Range Debug")
-                logger.info(f"  filt_s2sh  : min={filt_s2sh.min().item():.4f}  max={filt_s2sh.max().item():.4f}  mean={filt_s2sh.mean().item():.4f}")
-                logger.info(f"  filt_sh2s  : min={filt_sh2s.min().item():.4f}  max={filt_sh2s.max().item():.4f}  mean={filt_sh2s.mean().item():.4f}")
-                logger.info(f"  real_s2sh  : min={real_s2sh.min().item():.4f}  max={real_s2sh.max().item():.4f}  mean={real_s2sh.mean().item():.4f}")
-                logger.info(f"  real_sh2s  : min={real_sh2s.min().item():.4f}  max={real_sh2s.max().item():.4f}  mean={real_sh2s.mean().item():.4f}")
-                logger.info("Loss Magnitudes (epoch 1, batch 1)")
-                logger.info(f"  recon_loss : {recon_loss.item():.4f}")
-                logger.info(f"  mtf_loss   : {mtf_loss.item():.4f}")
-                logger.info(f"  ft_loss    : {ft_loss.item():.4f}")
-                logger.info(f"  ratio ft/recon : {ft_loss.item()/recon_loss.item():.2f}x")
-                logger.info(f"  ratio ft/mtf   : {ft_loss.item()/mtf_loss.item():.2f}x")
-                logger.info(f"  pred_mtf  : min={pred_mtf.min().item():.4f}  max={pred_mtf.max().item():.4f}  mean={pred_mtf.mean().item():.4f}")
-                logger.info(f"  target_mtf: min={target_mtfs.min().item():.4f}  max={target_mtfs.max().item():.4f}  mean={target_mtfs.mean().item():.4f}")
-            
-
-            loss = alpha * recon_loss + (1 - alpha) * mtf_loss + 0.01 * ft_loss
+            loss = ft_loss + recon_loss
 
         optimizer.zero_grad(set_to_none=True)
 
@@ -113,6 +101,33 @@ def train_one_epoch(model, image_loader, mtf_loader, optimizer, scaler, l1_loss,
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             grad_norm = compute_gradient_norm(model)
             optimizer.step()
+
+        # Plot filters at the first batch of every epoch
+        if i == 0:
+            fig, axes = plt.subplots(2, 2, figsize=(12, 4))
+
+            axes[0, 0].plot(filt_s2sh[0, 255, :].to(torch.float32).detach().cpu(), label='pred_s2sh')
+            axes[0, 0].set_title('pred_s2sh')
+            axes[0, 0].legend()
+
+            axes[0, 1].plot(real_s2sh[0, 255, :].to(torch.float32).detach().cpu(), label='real_s2sh')
+            axes[0, 1].set_title('real_s2sh')
+            axes[0, 1].legend()
+
+            axes[1, 0].plot(real_sh2s[0, 255, :].to(torch.float32).detach().cpu(), label='real_sh2s')
+            axes[1, 0].set_title('real_sh2s')
+            axes[1, 0].legend()
+
+            axes[1, 1].plot(filt_sh2s[0, 255, :].to(torch.float32).detach().cpu(), label='pred_sh2s')
+            axes[1, 1].set_title('pred_sh2s')
+            axes[1, 1].legend()
+
+            plt.suptitle(f"Epoch {epoch}")
+            plt.tight_layout()
+            plt.savefig(f"filters/filter_comparison_epoch_{epoch}.png")
+            plt.close()
+            print("control_scale:", model.control_scale.item())
+            
 
         running_loss  += loss.item()
         running_recon += recon_loss.item()
@@ -238,7 +253,7 @@ def main():
 
         train_stats, vis_data = train_one_epoch(
             model, img_train_loader, mtf_train_loader,
-            optimizer, scaler, l1_loss, ALPHA, device, logger
+            optimizer, scaler, l1_loss, ALPHA, device, logger, epoch=ep  # ← pass epoch
         )
         val_stats = validate(
             model, img_val_loader, mtf_val_loader,
@@ -271,7 +286,7 @@ def main():
 
         logger.info(
             f"  train — total: {train_stats['total_loss']:.4f}  recon: {train_stats['recon_loss']:.4f}"
-            f"  mtf: {train_stats['mtf_loss']:.4f}  ft: {train_stats['ft_loss']:.4f}"
+            f"  mtf: {train_stats['mtf_loss']:.4f}"
         )
         logger.info(
             f"  val   — total: {val_stats['total_loss']:.4f}  recon: {val_stats['recon_loss']:.4f}"

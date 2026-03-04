@@ -9,7 +9,7 @@ from TestDataset import TestDataset
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = KernelEstimator()
-checkpoint = torch.load(r"D:\Charan work file\PhantomTesting\Code\training_output_0.5\checkpoints\best_checkpoint.pth", map_location=device)
+checkpoint = torch.load(r"D:\Charan work file\PhantomTesting\Code\training_output_0.5_only_ft_loss\checkpoints\best_checkpoint.pth", map_location=device)
 model.load_state_dict(checkpoint['model_state_dict'])
 model.to(device)
 model.eval() 
@@ -19,7 +19,7 @@ data_root = r"D:\Charan work file\KernelEstimator\Data_Root"
 dataset = TestDataset(root_dir=data_root, preload=True)
 print('Loaded test dataset')
 
-output_dir = r"D:\Charan work file\PhantomTesting\reconstructions"
+output_dir = r"D:\Charan work file\PhantomTesting\reconstructions_2"
 os.makedirs(output_dir, exist_ok=True)
 
 
@@ -69,11 +69,23 @@ def reconstruct_volume(sample, model, device, output_dir):
         cur_sharp_psd  = compute_psd_from_tensor(I_sharp_tensor)
 
         with torch.no_grad():
-            sharp_knots, sharp_control = model(cur_smooth_psd)
-            smooth_knots,  smooth_control  = model(cur_sharp_psd)
+            smooth_knots, smooth_control = model(cur_smooth_psd)
+            sharp_knots, sharp_control = model(cur_sharp_psd)
 
-            filter_smooth2sharp, filter_sharp2smooth = spline_to_kernel(smooth_knots=smooth_knots,smooth_control_points=smooth_control,sharp_knots=sharp_knots,sharp_control_points=sharp_control,grid_size=512)
-            I_gen_sharp,  I_gen_smooth = generate_images(I_smooth=I_smooth_tensor,I_sharp=I_sharp_tensor,filter_smooth2sharp=filter_smooth2sharp,filter_sharp2smooth=filter_sharp2smooth,device=device)
+            filter_smooth2sharp, filter_sharp2smooth = spline_to_kernel(
+                smooth_knots=smooth_knots,
+                smooth_control_points=smooth_control,
+                sharp_knots=sharp_knots,
+                sharp_control_points=sharp_control,
+                grid_size=512
+            )
+            I_gen_sharp, I_gen_smooth = generate_images(
+                I_smooth=I_smooth_tensor,
+                I_sharp=I_sharp_tensor,
+                filter_smooth2sharp=filter_smooth2sharp,
+                filter_sharp2smooth=filter_sharp2smooth,
+                device=device
+            )
 
         res_sharp  = I_gen_sharp.detach().cpu().numpy().squeeze()
         res_smooth = I_gen_smooth.detach().cpu().numpy().squeeze()
