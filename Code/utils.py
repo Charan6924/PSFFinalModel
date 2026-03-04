@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from scipy.interpolate import BSpline
 import os
@@ -7,8 +8,24 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from itertools import cycle
 from scipy import signal
+import logging
+from datetime import datetime
 
-huber = nn.HuberLoss(delta = 1.0)
+huber = nn.HuberLoss(delta=1.0)
+
+
+def setup_logging(output_dir):
+    log_file = output_dir / f"training_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+    logger = logging.getLogger('training')
+    logger.setLevel(logging.INFO)
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    logger.addHandler(file_handler)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    logger.addHandler(console_handler)
+    return logger
 
 def plot_images_for_epoch(I_smooth, I_sharp, I_gen_sharp, I_gen_smooth, epoch, output_dir):
     output_dir = Path(output_dir)
@@ -172,9 +189,9 @@ def validate(model, image_loader, mtf_loader, l1_loss, alpha, device):
         pred_mtf = get_torch_spline(knots_mtf, control_mtf, num_points=target_mtfs.shape[-1]).squeeze(1)
         mtf_loss = l1_loss(pred_mtf, target_mtfs)
 
-        I_smooth_fft = compute_fft(I_smooth)
-        I_sharp_fft = compute_fft(I_sharp)
-        ft_loss = huber(log(I_smooth_fft.real + 1e-7) - log(I_sharp_fft.real + 1e-7),log(otf_smooth))
+        I_smooth_fft = compute_fft(I_smooth_1)
+        I_sharp_fft = compute_fft(I_sharp_1)
+        ft_loss = huber(torch.log(I_smooth_fft.abs() + 1e-7) - torch.log(I_sharp_fft.abs() + 1e-7), torch.log(otf_smooth + 1e-7))
 
         batch_loss = alpha * recon_loss + (1 - alpha) * mtf_loss + 0.5 * ft_loss
 

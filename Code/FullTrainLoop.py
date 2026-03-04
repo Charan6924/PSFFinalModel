@@ -9,7 +9,7 @@ from utils import (
     generate_images, get_torch_spline, save_checkpoint, load_checkpoint,
     compute_gradient_norm, plot_training_metrics, validate, compute_psd,
     plot_images_for_epoch, plot_splines_for_epoch, setup_logging,
-    spline_to_kernel, compute_ratios, compute_fft
+    spline_to_kernel, compute_fft, huber
 )
 from pathlib import Path
 from tqdm import tqdm
@@ -81,9 +81,11 @@ def train_one_epoch(model, image_loader, mtf_loader, optimizer, scaler, l1_loss,
             knots_mtf, cp_mtf = model(input_profiles)
             pred_mtf = get_torch_spline(knots_mtf, cp_mtf, num_points=target_mtfs.shape[-1]).squeeze(1)
             mtf_loss = l1_loss(pred_mtf, target_mtfs)
-            real_s2sh, real_sh2s = compute_ratios(I_sharp_fft=I_sharp_fft,I_smooth_fft=I_smooth_fft)
-            ft_loss = torch.abs(real_sh2s - filt_sh2s) + torch.abs(real_s2sh - filt_s2sh)
-            ft_loss = torch.log(ft_loss.mean() + 1)
+            # FT loss: compare log FFT difference to log OTF (same as validation)
+            ft_loss = huber(
+                torch.log(I_smooth_fft.abs() + 1e-7) - torch.log(I_sharp_fft.abs() + 1e-7),
+                torch.log(filt_s2sh + 1e-7)  # filt_s2sh is otf_smooth from spline_to_kernel
+            )
 
             loss = ft_loss + recon_loss
 
@@ -106,20 +108,26 @@ def train_one_epoch(model, image_loader, mtf_loader, optimizer, scaler, l1_loss,
         if i == 0:
             fig, axes = plt.subplots(2, 2, figsize=(12, 4))
 
-            axes[0, 0].plot(filt_s2sh[0, 255, :].to(torch.float32).detach().cpu(), label='pred_s2sh')
-            axes[0, 0].set_title('pred_s2sh')
+            # Compute real ratios from FFT for visualization
+            smooth_mag = I_smooth_fft.abs()
+            sharp_mag = I_sharp_fft.abs()
+            real_s2sh = sharp_mag / (smooth_mag + 1e-10)
+            real_sh2s = smooth_mag / (sharp_mag + 1e-10)
+
+            axes[0, 0].plot(filt_s2sh[0, 255, :].to(torch.float32).detach().cpu(), label='pred_otf_smooth')
+            axes[0, 0].set_title('pred_otf_smooth')
             axes[0, 0].legend()
 
             axes[0, 1].plot(real_s2sh[0, 255, :].to(torch.float32).detach().cpu(), label='real_s2sh')
-            axes[0, 1].set_title('real_s2sh')
+            axes[0, 1].set_title('real_s2sh (sharp/smooth)')
             axes[0, 1].legend()
 
             axes[1, 0].plot(real_sh2s[0, 255, :].to(torch.float32).detach().cpu(), label='real_sh2s')
-            axes[1, 0].set_title('real_sh2s')
+            axes[1, 0].set_title('real_sh2s (smooth/sharp)')
             axes[1, 0].legend()
 
-            axes[1, 1].plot(filt_sh2s[0, 255, :].to(torch.float32).detach().cpu(), label='pred_sh2s')
-            axes[1, 1].set_title('pred_sh2s')
+            axes[1, 1].plot(filt_sh2s[0, 255, :].to(torch.float32).detach().cpu(), label='pred_otf_sharp')
+            axes[1, 1].set_title('pred_otf_sharp')
             axes[1, 1].legend()
 
             plt.suptitle(f"Epoch {epoch}")
