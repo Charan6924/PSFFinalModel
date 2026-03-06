@@ -9,17 +9,17 @@ from TestDataset import TestDataset
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = KernelEstimator()
-checkpoint = torch.load(r"D:\Charan work file\PhantomTesting\Code\training_output_0.5_only_ft_loss\checkpoints\best_checkpoint.pth", map_location=device)
+checkpoint = torch.load("/home/cxv166/PhantomTesting/Code/training_output_0.5/checkpoints/best_checkpoint.pth", map_location=device)
 model.load_state_dict(checkpoint['model_state_dict'])
 model.to(device)
 model.eval() 
 print('Loaded model successfully')
 
-data_root = r"D:\Charan work file\KernelEstimator\Data_Root"
+data_root = "/home/cxv166/PhantomTesting/Data_Root"
 dataset = TestDataset(root_dir=data_root, preload=True)
 print('Loaded test dataset')
 
-output_dir = r"D:\Charan work file\PhantomTesting\reconstructions_2"
+output_dir = "/home/cxv166/PhantomTesting/reconstructions"
 os.makedirs(output_dir, exist_ok=True)
 
 
@@ -72,13 +72,17 @@ def reconstruct_volume(sample, model, device, output_dir):
             smooth_knots, smooth_control = model(cur_smooth_psd)
             sharp_knots, sharp_control = model(cur_sharp_psd)
 
-            filter_smooth2sharp, filter_sharp2smooth = spline_to_kernel(
+            filter_smooth, filter_sharp = spline_to_kernel(
                 smooth_knots=smooth_knots,
                 smooth_control_points=smooth_control,
                 sharp_knots=sharp_knots,
                 sharp_control_points=sharp_control,
                 grid_size=512
             )
+
+            filter_smooth2sharp = filter_sharp/(filter_smooth + 1e-10)
+            filter_sharp2smooth = filter_smooth/(filter_sharp + 1e-10)
+
             I_gen_sharp, I_gen_smooth = generate_images(
                 I_smooth=I_smooth_tensor,
                 I_sharp=I_sharp_tensor,

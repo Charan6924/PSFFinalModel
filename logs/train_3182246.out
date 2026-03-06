@@ -1,0 +1,796 @@
+Job ID: 3182246
+Node: gput073
+GPU: 0
+Start time: Wed Mar  4 18:47:40 EST 2026
+Device: cuda  |  alpha=0.5  |  lr=0.0001  |  epochs=150
+Finding volume pairs...
+Found 130 volume pairs
+Cached 260 unique volumes
+Total slices: 5602
+Memory usage: 27.30 GB
+Images  — train: 5041, val: 561
+MTF     — train: 185,  val: 47
+Parameters: 7,769,585
+
+--- Epoch 1/150  (lr=1.00e-04) ---
+control_scale: 1.499899983406067
+  [plot_data] I_gen_sharp: torch.Size([17, 512, 512])
+  [plot_data] I_gen_smooth: torch.Size([17, 512, 512])
+  [plot_data] I_sharp_1: torch.Size([17, 1, 512, 512])
+  [plot_data] I_smooth_2: torch.Size([17, 1, 512, 512])
+  [plot_data] smooth_knots: torch.Size([17, 14])
+  [plot_data] smooth_cp: torch.Size([17, 10])
+  [plot_data] sharp_knots: torch.Size([17, 14])
+  [plot_data] sharp_cp: torch.Size([17, 10])
+  [plot_data] filt_s2sh: torch.Size([17, 512, 512])
+  [plot_data] filt_sh2s: torch.Size([17, 512, 512])
+  train — total: 0.7762  recon: 0.0800  mtf: 0.6382
+  val   — total: 0.5572  recon: 0.0796  mtf: 0.6103
+  ** new best val loss: 0.557188 **
+
+--- Epoch 2/150  (lr=1.00e-04) ---
+control_scale: 1.4856802225112915
+  train — total: 0.4105  recon: 0.0810  mtf: 0.2735
+  val   — total: 0.4036  recon: 0.0796  mtf: 0.2937
+  ** new best val loss: 0.403633 **
+
+--- Epoch 3/150  (lr=1.00e-04) ---
+control_scale: 1.4783799648284912
+  train — total: 0.3271  recon: 0.0811  mtf: 0.1236
+  val   — total: 0.3955  recon: 0.0797  mtf: 0.2500
+  ** new best val loss: 0.395530 **
+
+--- Epoch 4/150  (lr=1.00e-04) ---
+control_scale: 1.4748833179473877
+  train — total: 0.2924  recon: 0.0807  mtf: 0.0741
+  val   — total: 0.3684  recon: 0.0796  mtf: 0.2383
+  ** new best val loss: 0.368370 **
+
+--- Epoch 5/150  (lr=1.00e-04) ---
+control_scale: 1.4730687141418457
+  train — total: 0.2819  recon: 0.0803  mtf: 0.0620
+  val   — total: 0.3335  recon: 0.0796  mtf: 0.1623
+  ** new best val loss: 0.333487 **
+
+--- Epoch 6/150  (lr=1.00e-04) ---
+control_scale: 1.4719191789627075
+  train — total: 0.2786  recon: 0.0801  mtf: 0.0568
+  val   — total: 0.3450  recon: 0.0796  mtf: 0.1926
+
+--- Epoch 7/150  (lr=1.00e-04) ---
+control_scale: 1.4710206985473633
+  train — total: 0.2749  recon: 0.0800  mtf: 0.0537
+  val   — total: 0.3370  recon: 0.0796  mtf: 0.1847
+
+--- Epoch 8/150  (lr=1.00e-04) ---
+control_scale: 1.470155954360962
+  train — total: 0.2724  recon: 0.0799  mtf: 0.0509
+  val   — total: 0.3293  recon: 0.0796  mtf: 0.1720
+  ** new best val loss: 0.329284 **
+
+--- Epoch 9/150  (lr=1.00e-04) ---
+control_scale: 1.4692713022232056
+  train — total: 0.2710  recon: 0.0798  mtf: 0.0490
+  val   — total: 0.3314  recon: 0.0796  mtf: 0.1498
+
+--- Epoch 10/150  (lr=1.00e-04) ---
+control_scale: 1.4684226512908936
+  train — total: 0.2688  recon: 0.0797  mtf: 0.0470
+  val   — total: 0.3279  recon: 0.0796  mtf: 0.1481
+  ** new best val loss: 0.327914 **
+
+--- Epoch 11/150  (lr=1.00e-04) ---
+control_scale: 1.4675487279891968
+  train — total: 0.2761  recon: 0.0797  mtf: 0.0473
+  val   — total: 0.3177  recon: 0.0796  mtf: 0.1370
+  ** new best val loss: 0.317730 **
+
+--- Epoch 12/150  (lr=1.00e-04) ---
+control_scale: 1.4667553901672363
+  train — total: 0.2662  recon: 0.0797  mtf: 0.0454
+  val   — total: 0.3163  recon: 0.0796  mtf: 0.1393
+  ** new best val loss: 0.316324 **
+
+--- Epoch 13/150  (lr=1.00e-04) ---
+control_scale: 1.4661012887954712
+  train — total: 0.2661  recon: 0.0797  mtf: 0.0443
+  val   — total: 0.3185  recon: 0.0796  mtf: 0.1496
+
+--- Epoch 14/150  (lr=1.00e-04) ---
+control_scale: 1.4653986692428589
+  train — total: 0.2656  recon: 0.0795  mtf: 0.0451
+  val   — total: 0.3274  recon: 0.0796  mtf: 0.1600
+
+--- Epoch 15/150  (lr=1.00e-04) ---
+control_scale: 1.4648045301437378
+  train — total: 0.2637  recon: 0.0796  mtf: 0.0420
+  val   — total: 0.3280  recon: 0.0796  mtf: 0.1528
+
+--- Epoch 16/150  (lr=1.00e-04) ---
+control_scale: 1.4640864133834839
+  train — total: 0.2629  recon: 0.0796  mtf: 0.0428
+  val   — total: 0.3267  recon: 0.0796  mtf: 0.1682
+
+--- Epoch 17/150  (lr=1.00e-04) ---
+control_scale: 1.4635460376739502
+  train — total: 0.2650  recon: 0.0796  mtf: 0.0407
+  val   — total: 0.3281  recon: 0.0796  mtf: 0.1532
+
+--- Epoch 18/150  (lr=1.00e-04) ---
+control_scale: 1.46279776096344
+LR dropped: 1.00e-04 -> 5.00e-05
+  train — total: 0.2618  recon: 0.0796  mtf: 0.0407
+  val   — total: 0.3327  recon: 0.0796  mtf: 0.1513
+
+--- Epoch 19/150  (lr=5.00e-05) ---
+control_scale: 1.4622554779052734
+  train — total: 0.2614  recon: 0.0796  mtf: 0.0411
+  val   — total: 0.3310  recon: 0.0796  mtf: 0.1420
+
+--- Epoch 20/150  (lr=5.00e-05) ---
+control_scale: 1.4618995189666748
+  train — total: 0.2600  recon: 0.0796  mtf: 0.0392
+  val   — total: 0.3256  recon: 0.0796  mtf: 0.1449
+
+--- Epoch 21/150  (lr=5.00e-05) ---
+control_scale: 1.4615458250045776
+  train — total: 0.2609  recon: 0.0795  mtf: 0.0409
+  val   — total: 0.3305  recon: 0.0796  mtf: 0.1711
+
+--- Epoch 22/150  (lr=5.00e-05) ---
+control_scale: 1.461332082748413
+  train — total: 0.2602  recon: 0.0795  mtf: 0.0397
+  val   — total: 0.3285  recon: 0.0796  mtf: 0.1496
+
+--- Epoch 23/150  (lr=5.00e-05) ---
+control_scale: 1.4610263109207153
+  train — total: 0.2592  recon: 0.0795  mtf: 0.0385
+  val   — total: 0.3342  recon: 0.0796  mtf: 0.1500
+
+--- Epoch 24/150  (lr=5.00e-05) ---
+control_scale: 1.4607326984405518
+LR dropped: 5.00e-05 -> 2.50e-05
+  train — total: 0.2594  recon: 0.0796  mtf: 0.0386
+  val   — total: 0.3298  recon: 0.0796  mtf: 0.1436
+
+--- Epoch 25/150  (lr=2.50e-05) ---
+control_scale: 1.4604209661483765
+  train — total: 0.2597  recon: 0.0796  mtf: 0.0390
+  val   — total: 0.3383  recon: 0.0796  mtf: 0.1585
+
+--- Epoch 26/150  (lr=2.50e-05) ---
+control_scale: 1.4602320194244385
+  train — total: 0.2592  recon: 0.0796  mtf: 0.0385
+  val   — total: 0.3436  recon: 0.0796  mtf: 0.1631
+
+--- Epoch 27/150  (lr=2.50e-05) ---
+control_scale: 1.4602329730987549
+  train — total: 0.2592  recon: 0.0795  mtf: 0.0397
+  val   — total: 0.3308  recon: 0.0796  mtf: 0.1507
+
+--- Epoch 28/150  (lr=2.50e-05) ---
+control_scale: 1.4601689577102661
+  train — total: 0.2586  recon: 0.0796  mtf: 0.0384
+  val   — total: 0.3382  recon: 0.0796  mtf: 0.1498
+
+--- Epoch 29/150  (lr=2.50e-05) ---
+control_scale: 1.4600439071655273
+  train — total: 0.2580  recon: 0.0795  mtf: 0.0371
+  val   — total: 0.3323  recon: 0.0796  mtf: 0.1484
+
+--- Epoch 30/150  (lr=2.50e-05) ---
+control_scale: 1.4598699808120728
+LR dropped: 2.50e-05 -> 1.25e-05
+  train — total: 0.2584  recon: 0.0795  mtf: 0.0377
+  val   — total: 0.3329  recon: 0.0796  mtf: 0.1532
+
+--- Epoch 31/150  (lr=1.25e-05) ---
+control_scale: 1.4596937894821167
+  train — total: 0.2580  recon: 0.0796  mtf: 0.0366
+  val   — total: 0.3401  recon: 0.0796  mtf: 0.1534
+
+--- Epoch 32/150  (lr=1.25e-05) ---
+control_scale: 1.4596076011657715
+  train — total: 0.2579  recon: 0.0795  mtf: 0.0375
+  val   — total: 0.3356  recon: 0.0796  mtf: 0.1518
+
+--- Epoch 33/150  (lr=1.25e-05) ---
+control_scale: 1.4595469236373901
+  train — total: 0.2570  recon: 0.0795  mtf: 0.0359
+  val   — total: 0.3399  recon: 0.0796  mtf: 0.1477
+
+--- Epoch 34/150  (lr=1.25e-05) ---
+control_scale: 1.4594520330429077
+  train — total: 0.2573  recon: 0.0796  mtf: 0.0364
+  val   — total: 0.3367  recon: 0.0796  mtf: 0.1568
+
+--- Epoch 35/150  (lr=1.25e-05) ---
+control_scale: 1.4593641757965088
+  train — total: 0.2576  recon: 0.0795  mtf: 0.0379
+  val   — total: 0.3336  recon: 0.0796  mtf: 0.1557
+
+--- Epoch 36/150  (lr=1.25e-05) ---
+control_scale: 1.4592714309692383
+LR dropped: 1.25e-05 -> 6.25e-06
+  train — total: 0.2576  recon: 0.0796  mtf: 0.0363
+  val   — total: 0.3336  recon: 0.0796  mtf: 0.1517
+
+--- Epoch 37/150  (lr=6.25e-06) ---
+control_scale: 1.4591941833496094
+  train — total: 0.2571  recon: 0.0795  mtf: 0.0362
+  val   — total: 0.3335  recon: 0.0796  mtf: 0.1485
+
+--- Epoch 38/150  (lr=6.25e-06) ---
+control_scale: 1.4591315984725952
+  train — total: 0.2573  recon: 0.0794  mtf: 0.0363
+  val   — total: 0.3361  recon: 0.0796  mtf: 0.1537
+
+--- Epoch 39/150  (lr=6.25e-06) ---
+control_scale: 1.4590539932250977
+  train — total: 0.2574  recon: 0.0795  mtf: 0.0369
+  val   — total: 0.3363  recon: 0.0796  mtf: 0.1497
+
+--- Epoch 40/150  (lr=6.25e-06) ---
+control_scale: 1.4589685201644897
+  train — total: 0.2582  recon: 0.0795  mtf: 0.0372
+  val   — total: 0.3390  recon: 0.0796  mtf: 0.1520
+
+--- Epoch 41/150  (lr=6.25e-06) ---
+control_scale: 1.4588954448699951
+  train — total: 0.2569  recon: 0.0795  mtf: 0.0364
+  val   — total: 0.3366  recon: 0.0796  mtf: 0.1541
+
+--- Epoch 42/150  (lr=6.25e-06) ---
+control_scale: 1.4588623046875
+LR dropped: 6.25e-06 -> 3.13e-06
+  train — total: 0.2574  recon: 0.0796  mtf: 0.0366
+  val   — total: 0.3348  recon: 0.0796  mtf: 0.1538
+
+--- Epoch 43/150  (lr=3.13e-06) ---
+control_scale: 1.4588278532028198
+  train — total: 0.2570  recon: 0.0795  mtf: 0.0365
+  val   — total: 0.3361  recon: 0.0796  mtf: 0.1537
+
+--- Epoch 44/150  (lr=3.13e-06) ---
+control_scale: 1.4588074684143066
+  train — total: 0.2561  recon: 0.0796  mtf: 0.0355
+  val   — total: 0.3321  recon: 0.0796  mtf: 0.1489
+
+--- Epoch 45/150  (lr=3.13e-06) ---
+control_scale: 1.4587819576263428
+  train — total: 0.2573  recon: 0.0795  mtf: 0.0371
+  val   — total: 0.3328  recon: 0.0796  mtf: 0.1501
+
+--- Epoch 46/150  (lr=3.13e-06) ---
+control_scale: 1.4587275981903076
+  train — total: 0.2571  recon: 0.0795  mtf: 0.0365
+  val   — total: 0.3342  recon: 0.0796  mtf: 0.1518
+
+--- Epoch 47/150  (lr=3.13e-06) ---
+control_scale: 1.4587188959121704
+  train — total: 0.2573  recon: 0.0795  mtf: 0.0362
+  val   — total: 0.3350  recon: 0.0796  mtf: 0.1527
+
+--- Epoch 48/150  (lr=3.13e-06) ---
+control_scale: 1.4586867094039917
+LR dropped: 3.13e-06 -> 1.56e-06
+  train — total: 0.2567  recon: 0.0795  mtf: 0.0358
+  val   — total: 0.3347  recon: 0.0796  mtf: 0.1505
+
+--- Epoch 49/150  (lr=1.56e-06) ---
+control_scale: 1.4586561918258667
+  train — total: 0.2575  recon: 0.0796  mtf: 0.0379
+  val   — total: 0.3371  recon: 0.0796  mtf: 0.1539
+
+--- Epoch 50/150  (lr=1.56e-06) ---
+control_scale: 1.45864737033844
+  train — total: 0.2566  recon: 0.0796  mtf: 0.0363
+  val   — total: 0.3364  recon: 0.0796  mtf: 0.1534
+
+--- Epoch 51/150  (lr=1.56e-06) ---
+control_scale: 1.4586330652236938
+  train — total: 0.2575  recon: 0.0796  mtf: 0.0360
+  val   — total: 0.3339  recon: 0.0796  mtf: 0.1481
+
+--- Epoch 52/150  (lr=1.56e-06) ---
+control_scale: 1.458624243736267
+  train — total: 0.2567  recon: 0.0795  mtf: 0.0366
+  val   — total: 0.3347  recon: 0.0796  mtf: 0.1501
+
+--- Epoch 53/150  (lr=1.56e-06) ---
+control_scale: 1.4586273431777954
+  train — total: 0.2571  recon: 0.0795  mtf: 0.0363
+  val   — total: 0.3363  recon: 0.0796  mtf: 0.1523
+
+--- Epoch 54/150  (lr=1.56e-06) ---
+control_scale: 1.4586036205291748
+LR dropped: 1.56e-06 -> 7.81e-07
+  train — total: 0.2576  recon: 0.0795  mtf: 0.0372
+  val   — total: 0.3359  recon: 0.0796  mtf: 0.1536
+
+--- Epoch 55/150  (lr=7.81e-07) ---
+control_scale: 1.4586008787155151
+  train — total: 0.2575  recon: 0.0795  mtf: 0.0359
+  val   — total: 0.3361  recon: 0.0796  mtf: 0.1534
+
+--- Epoch 56/150  (lr=7.81e-07) ---
+control_scale: 1.4586033821105957
+  train — total: 0.2575  recon: 0.0795  mtf: 0.0363
+  val   — total: 0.3358  recon: 0.0796  mtf: 0.1530
+
+--- Epoch 57/150  (lr=7.81e-07) ---
+control_scale: 1.4585949182510376
+  train — total: 0.2565  recon: 0.0795  mtf: 0.0356
+  val   — total: 0.3354  recon: 0.0796  mtf: 0.1517
+
+--- Epoch 58/150  (lr=7.81e-07) ---
+control_scale: 1.4585965871810913
+  train — total: 0.2572  recon: 0.0796  mtf: 0.0359
+  val   — total: 0.3351  recon: 0.0796  mtf: 0.1512
+
+--- Epoch 59/150  (lr=7.81e-07) ---
+control_scale: 1.4585877656936646
+  train — total: 0.2569  recon: 0.0795  mtf: 0.0361
+  val   — total: 0.3358  recon: 0.0796  mtf: 0.1527
+
+--- Epoch 60/150  (lr=7.81e-07) ---
+control_scale: 1.4585857391357422
+LR dropped: 7.81e-07 -> 3.91e-07
+  train — total: 0.2563  recon: 0.0795  mtf: 0.0355
+  val   — total: 0.3382  recon: 0.0796  mtf: 0.1567
+
+--- Epoch 61/150  (lr=3.91e-07) ---
+control_scale: 1.458584189414978
+  train — total: 0.2566  recon: 0.0795  mtf: 0.0355
+  val   — total: 0.3372  recon: 0.0796  mtf: 0.1555
+
+--- Epoch 62/150  (lr=3.91e-07) ---
+control_scale: 1.458578109741211
+  train — total: 0.2572  recon: 0.0795  mtf: 0.0358
+  val   — total: 0.3359  recon: 0.0796  mtf: 0.1531
+
+--- Epoch 63/150  (lr=3.91e-07) ---
+control_scale: 1.4585773944854736
+  train — total: 0.2571  recon: 0.0796  mtf: 0.0362
+  val   — total: 0.3353  recon: 0.0796  mtf: 0.1521
+
+--- Epoch 64/150  (lr=3.91e-07) ---
+control_scale: 1.4585740566253662
+  train — total: 0.2572  recon: 0.0796  mtf: 0.0354
+  val   — total: 0.3341  recon: 0.0796  mtf: 0.1514
+
+--- Epoch 65/150  (lr=3.91e-07) ---
+control_scale: 1.4585696458816528
+  train — total: 0.2576  recon: 0.0795  mtf: 0.0365
+  val   — total: 0.3387  recon: 0.0796  mtf: 0.1592
+
+--- Epoch 66/150  (lr=3.91e-07) ---
+control_scale: 1.4585630893707275
+LR dropped: 3.91e-07 -> 1.95e-07
+  train — total: 0.2571  recon: 0.0795  mtf: 0.0370
+  val   — total: 0.3349  recon: 0.0796  mtf: 0.1514
+
+--- Epoch 67/150  (lr=1.95e-07) ---
+control_scale: 1.4585589170455933
+  train — total: 0.2589  recon: 0.0796  mtf: 0.0402
+  val   — total: 0.3359  recon: 0.0796  mtf: 0.1542
+
+--- Epoch 68/150  (lr=1.95e-07) ---
+control_scale: 1.4585530757904053
+  train — total: 0.2566  recon: 0.0796  mtf: 0.0356
+  val   — total: 0.3338  recon: 0.0796  mtf: 0.1495
+
+--- Epoch 69/150  (lr=1.95e-07) ---
+control_scale: 1.4585530757904053
+  train — total: 0.2563  recon: 0.0795  mtf: 0.0355
+  val   — total: 0.3345  recon: 0.0796  mtf: 0.1512
+
+--- Epoch 70/150  (lr=1.95e-07) ---
+control_scale: 1.4585530757904053
+  train — total: 0.2581  recon: 0.0796  mtf: 0.0365
+  val   — total: 0.3350  recon: 0.0796  mtf: 0.1516
+
+--- Epoch 71/150  (lr=1.95e-07) ---
+control_scale: 1.4585530757904053
+  train — total: 0.2560  recon: 0.0795  mtf: 0.0362
+  val   — total: 0.3360  recon: 0.0796  mtf: 0.1544
+
+--- Epoch 72/150  (lr=1.95e-07) ---
+control_scale: 1.4585530757904053
+LR dropped: 1.95e-07 -> 1.00e-07
+  train — total: 0.2573  recon: 0.0795  mtf: 0.0369
+  val   — total: 0.3352  recon: 0.0796  mtf: 0.1509
+
+--- Epoch 73/150  (lr=1.00e-07) ---
+control_scale: 1.4585522413253784
+  train — total: 0.2568  recon: 0.0795  mtf: 0.0355
+  val   — total: 0.3378  recon: 0.0796  mtf: 0.1568
+
+--- Epoch 74/150  (lr=1.00e-07) ---
+control_scale: 1.4585522413253784
+  train — total: 0.2571  recon: 0.0795  mtf: 0.0365
+  val   — total: 0.3349  recon: 0.0796  mtf: 0.1513
+
+--- Epoch 75/150  (lr=1.00e-07) ---
+control_scale: 1.4585522413253784
+  train — total: 0.2579  recon: 0.0796  mtf: 0.0374
+  val   — total: 0.3332  recon: 0.0796  mtf: 0.1477
+
+--- Epoch 76/150  (lr=1.00e-07) ---
+control_scale: 1.4585522413253784
+  train — total: 0.2563  recon: 0.0796  mtf: 0.0360
+  val   — total: 0.3346  recon: 0.0796  mtf: 0.1522
+
+--- Epoch 77/150  (lr=1.00e-07) ---
+control_scale: 1.4585522413253784
+  train — total: 0.2570  recon: 0.0795  mtf: 0.0358
+  val   — total: 0.3386  recon: 0.0796  mtf: 0.1573
+
+--- Epoch 78/150  (lr=1.00e-07) ---
+control_scale: 1.4585522413253784
+  train — total: 0.2575  recon: 0.0796  mtf: 0.0360
+  val   — total: 0.3333  recon: 0.0796  mtf: 0.1478
+
+--- Epoch 79/150  (lr=1.00e-07) ---
+control_scale: 1.4585522413253784
+  train — total: 0.2571  recon: 0.0796  mtf: 0.0364
+  val   — total: 0.3347  recon: 0.0796  mtf: 0.1522
+
+--- Epoch 80/150  (lr=1.00e-07) ---
+control_scale: 1.4585522413253784
+  train — total: 0.2566  recon: 0.0795  mtf: 0.0365
+  val   — total: 0.3373  recon: 0.0796  mtf: 0.1556
+
+--- Epoch 81/150  (lr=1.00e-07) ---
+control_scale: 1.4585522413253784
+  train — total: 0.2569  recon: 0.0795  mtf: 0.0364
+  val   — total: 0.3346  recon: 0.0796  mtf: 0.1508
+
+--- Epoch 82/150  (lr=1.00e-07) ---
+control_scale: 1.4585522413253784
+  train — total: 0.2571  recon: 0.0796  mtf: 0.0361
+  val   — total: 0.3376  recon: 0.0796  mtf: 0.1568
+
+--- Epoch 83/150  (lr=1.00e-07) ---
+control_scale: 1.4585522413253784
+  train — total: 0.2569  recon: 0.0795  mtf: 0.0361
+  val   — total: 0.3344  recon: 0.0796  mtf: 0.1523
+
+--- Epoch 84/150  (lr=1.00e-07) ---
+control_scale: 1.4585522413253784
+  train — total: 0.2569  recon: 0.0795  mtf: 0.0367
+  val   — total: 0.3346  recon: 0.0796  mtf: 0.1520
+
+--- Epoch 85/150  (lr=1.00e-07) ---
+control_scale: 1.4585522413253784
+  train — total: 0.2574  recon: 0.0795  mtf: 0.0380
+  val   — total: 0.3369  recon: 0.0796  mtf: 0.1548
+
+--- Epoch 86/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2570  recon: 0.0796  mtf: 0.0355
+  val   — total: 0.3346  recon: 0.0796  mtf: 0.1515
+
+--- Epoch 87/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2566  recon: 0.0795  mtf: 0.0359
+  val   — total: 0.3355  recon: 0.0796  mtf: 0.1536
+
+--- Epoch 88/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2560  recon: 0.0795  mtf: 0.0354
+  val   — total: 0.3314  recon: 0.0796  mtf: 0.1449
+
+--- Epoch 89/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2568  recon: 0.0795  mtf: 0.0361
+  val   — total: 0.3355  recon: 0.0796  mtf: 0.1528
+
+--- Epoch 90/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2566  recon: 0.0795  mtf: 0.0357
+  val   — total: 0.3363  recon: 0.0796  mtf: 0.1563
+
+--- Epoch 91/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2562  recon: 0.0795  mtf: 0.0360
+  val   — total: 0.3365  recon: 0.0796  mtf: 0.1554
+
+--- Epoch 92/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2572  recon: 0.0795  mtf: 0.0379
+  val   — total: 0.3383  recon: 0.0796  mtf: 0.1574
+
+--- Epoch 93/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2572  recon: 0.0795  mtf: 0.0364
+  val   — total: 0.3347  recon: 0.0796  mtf: 0.1521
+
+--- Epoch 94/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2568  recon: 0.0796  mtf: 0.0363
+  val   — total: 0.3358  recon: 0.0796  mtf: 0.1514
+
+--- Epoch 95/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2565  recon: 0.0796  mtf: 0.0357
+  val   — total: 0.3319  recon: 0.0796  mtf: 0.1451
+
+--- Epoch 96/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2567  recon: 0.0795  mtf: 0.0355
+  val   — total: 0.3352  recon: 0.0796  mtf: 0.1525
+
+--- Epoch 97/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2568  recon: 0.0795  mtf: 0.0359
+  val   — total: 0.3362  recon: 0.0796  mtf: 0.1555
+
+--- Epoch 98/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2572  recon: 0.0795  mtf: 0.0366
+  val   — total: 0.3348  recon: 0.0796  mtf: 0.1513
+
+--- Epoch 99/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2577  recon: 0.0795  mtf: 0.0363
+  val   — total: 0.3348  recon: 0.0796  mtf: 0.1517
+
+--- Epoch 100/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2559  recon: 0.0795  mtf: 0.0356
+  val   — total: 0.3342  recon: 0.0796  mtf: 0.1503
+
+--- Epoch 101/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2566  recon: 0.0796  mtf: 0.0357
+  val   — total: 0.3316  recon: 0.0796  mtf: 0.1466
+
+--- Epoch 102/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2565  recon: 0.0795  mtf: 0.0357
+  val   — total: 0.3326  recon: 0.0796  mtf: 0.1495
+
+--- Epoch 103/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2576  recon: 0.0795  mtf: 0.0367
+  val   — total: 0.3347  recon: 0.0796  mtf: 0.1515
+
+--- Epoch 104/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2568  recon: 0.0795  mtf: 0.0361
+  val   — total: 0.3340  recon: 0.0796  mtf: 0.1505
+
+--- Epoch 105/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2571  recon: 0.0796  mtf: 0.0355
+  val   — total: 0.3353  recon: 0.0796  mtf: 0.1539
+
+--- Epoch 106/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2561  recon: 0.0796  mtf: 0.0359
+  val   — total: 0.3344  recon: 0.0796  mtf: 0.1512
+
+--- Epoch 107/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2561  recon: 0.0795  mtf: 0.0355
+  val   — total: 0.3326  recon: 0.0796  mtf: 0.1489
+
+--- Epoch 108/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2559  recon: 0.0795  mtf: 0.0359
+  val   — total: 0.3349  recon: 0.0796  mtf: 0.1525
+
+--- Epoch 109/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2570  recon: 0.0795  mtf: 0.0362
+  val   — total: 0.3339  recon: 0.0796  mtf: 0.1506
+
+--- Epoch 110/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2563  recon: 0.0795  mtf: 0.0354
+  val   — total: 0.3349  recon: 0.0796  mtf: 0.1522
+
+--- Epoch 111/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2567  recon: 0.0795  mtf: 0.0366
+  val   — total: 0.3387  recon: 0.0796  mtf: 0.1598
+
+--- Epoch 112/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2571  recon: 0.0795  mtf: 0.0358
+  val   — total: 0.3350  recon: 0.0796  mtf: 0.1523
+
+--- Epoch 113/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2568  recon: 0.0795  mtf: 0.0361
+  val   — total: 0.3380  recon: 0.0796  mtf: 0.1578
+
+--- Epoch 114/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2568  recon: 0.0796  mtf: 0.0362
+  val   — total: 0.3333  recon: 0.0796  mtf: 0.1493
+
+--- Epoch 115/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2573  recon: 0.0795  mtf: 0.0364
+  val   — total: 0.3329  recon: 0.0796  mtf: 0.1492
+
+--- Epoch 116/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2571  recon: 0.0795  mtf: 0.0365
+  val   — total: 0.3350  recon: 0.0796  mtf: 0.1523
+
+--- Epoch 117/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2571  recon: 0.0795  mtf: 0.0366
+  val   — total: 0.3322  recon: 0.0796  mtf: 0.1463
+
+--- Epoch 118/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2564  recon: 0.0795  mtf: 0.0355
+  val   — total: 0.3338  recon: 0.0796  mtf: 0.1494
+
+--- Epoch 119/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2565  recon: 0.0795  mtf: 0.0361
+  val   — total: 0.3326  recon: 0.0796  mtf: 0.1471
+
+--- Epoch 120/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2560  recon: 0.0796  mtf: 0.0356
+  val   — total: 0.3355  recon: 0.0796  mtf: 0.1526
+
+--- Epoch 121/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2563  recon: 0.0796  mtf: 0.0356
+  val   — total: 0.3342  recon: 0.0796  mtf: 0.1523
+
+--- Epoch 122/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2566  recon: 0.0795  mtf: 0.0359
+  val   — total: 0.3350  recon: 0.0796  mtf: 0.1519
+
+--- Epoch 123/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2573  recon: 0.0795  mtf: 0.0367
+  val   — total: 0.3346  recon: 0.0796  mtf: 0.1520
+
+--- Epoch 124/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2570  recon: 0.0795  mtf: 0.0357
+  val   — total: 0.3332  recon: 0.0796  mtf: 0.1487
+
+--- Epoch 125/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2568  recon: 0.0795  mtf: 0.0353
+  val   — total: 0.3340  recon: 0.0796  mtf: 0.1499
+
+--- Epoch 126/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2567  recon: 0.0795  mtf: 0.0364
+  val   — total: 0.3351  recon: 0.0796  mtf: 0.1534
+
+--- Epoch 127/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2561  recon: 0.0796  mtf: 0.0356
+  val   — total: 0.3373  recon: 0.0796  mtf: 0.1568
+
+--- Epoch 128/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2566  recon: 0.0796  mtf: 0.0362
+  val   — total: 0.3357  recon: 0.0796  mtf: 0.1543
+
+--- Epoch 129/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2566  recon: 0.0795  mtf: 0.0357
+  val   — total: 0.3377  recon: 0.0796  mtf: 0.1577
+
+--- Epoch 130/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2570  recon: 0.0795  mtf: 0.0357
+  val   — total: 0.3334  recon: 0.0796  mtf: 0.1493
+
+--- Epoch 131/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2569  recon: 0.0795  mtf: 0.0366
+  val   — total: 0.3360  recon: 0.0796  mtf: 0.1560
+
+--- Epoch 132/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2562  recon: 0.0795  mtf: 0.0357
+  val   — total: 0.3361  recon: 0.0796  mtf: 0.1543
+
+--- Epoch 133/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2568  recon: 0.0796  mtf: 0.0357
+  val   — total: 0.3349  recon: 0.0796  mtf: 0.1531
+
+--- Epoch 134/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2571  recon: 0.0796  mtf: 0.0364
+  val   — total: 0.3358  recon: 0.0796  mtf: 0.1538
+
+--- Epoch 135/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2571  recon: 0.0796  mtf: 0.0365
+  val   — total: 0.3334  recon: 0.0796  mtf: 0.1492
+
+--- Epoch 136/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2572  recon: 0.0795  mtf: 0.0359
+  val   — total: 0.3337  recon: 0.0796  mtf: 0.1503
+
+--- Epoch 137/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2569  recon: 0.0797  mtf: 0.0365
+  val   — total: 0.3359  recon: 0.0796  mtf: 0.1541
+
+--- Epoch 138/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2562  recon: 0.0795  mtf: 0.0361
+  val   — total: 0.3354  recon: 0.0796  mtf: 0.1529
+
+--- Epoch 139/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2575  recon: 0.0796  mtf: 0.0359
+  val   — total: 0.3314  recon: 0.0796  mtf: 0.1468
+
+--- Epoch 140/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2567  recon: 0.0796  mtf: 0.0353
+  val   — total: 0.3349  recon: 0.0796  mtf: 0.1529
+
+--- Epoch 141/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2572  recon: 0.0796  mtf: 0.0357
+  val   — total: 0.3334  recon: 0.0796  mtf: 0.1492
+
+--- Epoch 142/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2562  recon: 0.0795  mtf: 0.0354
+  val   — total: 0.3324  recon: 0.0796  mtf: 0.1487
+
+--- Epoch 143/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2560  recon: 0.0796  mtf: 0.0353
+  val   — total: 0.3343  recon: 0.0796  mtf: 0.1516
+
+--- Epoch 144/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2568  recon: 0.0796  mtf: 0.0359
+  val   — total: 0.3342  recon: 0.0796  mtf: 0.1513
+
+--- Epoch 145/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2574  recon: 0.0795  mtf: 0.0363
+  val   — total: 0.3346  recon: 0.0796  mtf: 0.1536
+
+--- Epoch 146/150  (lr=1.00e-07) ---
+control_scale: 1.4585521221160889
+  train — total: 0.2570  recon: 0.0796  mtf: 0.0359
+  val   — total: 0.3365  recon: 0.0796  mtf: 0.1558
+
+--- Epoch 147/150  (lr=1.00e-07) ---
+control_scale: 1.4585520029067993
+  train — total: 0.2570  recon: 0.0795  mtf: 0.0350
+  val   — total: 0.3362  recon: 0.0796  mtf: 0.1560
+
+--- Epoch 148/150  (lr=1.00e-07) ---
+control_scale: 1.4585520029067993
+  train — total: 0.2570  recon: 0.0795  mtf: 0.0358
+  val   — total: 0.3359  recon: 0.0796  mtf: 0.1552
+
+--- Epoch 149/150  (lr=1.00e-07) ---
+control_scale: 1.4585520029067993
+  train — total: 0.2568  recon: 0.0795  mtf: 0.0362
+  val   — total: 0.3353  recon: 0.0796  mtf: 0.1535
+
+--- Epoch 150/150  (lr=1.00e-07) ---
+control_scale: 1.4585520029067993
+  train — total: 0.2567  recon: 0.0795  mtf: 0.0357
+  val   — total: 0.3350  recon: 0.0796  mtf: 0.1537
+
+Done. Best val loss: 0.316324
+Metrics saved to: training_output_0.5/training_metrics_20260304_184757.csv
+End time: Thu Mar  5 00:15:45 EST 2026

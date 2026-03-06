@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=kernel_train
+#SBATCH --job-name=kernel_reconstruction
 #SBATCH --account=dlw
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
 #SBATCH --mem=64gb
-#SBATCH --constraint=gpu2h100
+#SBATCH --constraint=gpul40s
 #SBATCH --output=logs/train_%j.out
 #SBATCH --error=logs/train_%j.err
 
@@ -22,6 +22,6 @@ echo "GPU: $CUDA_VISIBLE_DEVICES"
 echo "Start time: $(date)"
 
 # Run training
-uv run FullTrainLoop.py
+uv run reconstruct.py
 
 echo "End time: $(date)"

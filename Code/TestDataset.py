@@ -108,7 +108,7 @@ class TestDataset(Dataset):
         }
 
 
-root_dir = r"D:\Charan work file\KernelEstimator\Data_Root"
+root_dir = "/home/cxv166/PhantomTesting/Data_Root"
 test_dataset = TestDataset(root_dir=root_dir)
 
 print(f"\nDataset length: {len(test_dataset)}")
