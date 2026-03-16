@@ -1,0 +1,22 @@
+Job ID: 3207938
+Node: gput072
+GPU: 0
+Start time: Sun Mar 15 22:36:53 EDT 2026
+Device: cuda  |  alpha=0.5  |  lr=0.0001  |  epochs=150
+TrainConfig(image_root='/home/cxv166/PhantomTesting/Data_Root', mtf_folder='/home/cxv166/PhantomTesting/MTF_Results_Output', psd_folder='/home/cxv166/PhantomTesting/PSD_Results_Output', alpha=0.5, lr=0.0001, epochs=150, batch_size=32, resume=False, sched_factor=0.5, sched_patience=5, sched_min_lr=1e-07)
+Finding volume pairs...
+Found 130 volume pairs
+Cached 260 unique volumes
+Total slices: 5602
+Memory usage: 27.30 GB
+Images — train: 5041, val: 561
+MTF — train: 185,  val: 47
+Parameters: 7,769,585
+
+--- Epoch 1/150  (lr=1.00e-04) ---
+control_scale: 1.499899983406067
+  train — total: 0.7914  recon: 0.0798  mtf: 0.6552
+  val   — total: 0.5421  recon: 0.0796  mtf: 0.5758
+  ** new best val loss: 0.542149 **
+
+--- Epoch 2/150  (lr=1.00e-04) ---
