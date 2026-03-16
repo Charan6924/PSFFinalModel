@@ -11,7 +11,7 @@ class FixedSplineLayer(nn.Module):
         deltas = F.softplus(knot_params) + 1e-3
         internal_knots = torch.cumsum(deltas, dim=1)
         internal_knots = internal_knots / (internal_knots[:, -1].unsqueeze(1) + 1e-6)
-        internal_knots = internal_knots * 0.90  
+        #internal_knots = internal_knots * 0.90  
         
         padding = self.degree + 1
         zeros = torch.zeros(batch_size, padding, device=device)

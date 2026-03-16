@@ -37,3 +37,4 @@ testb_fake_2d_mtf/
 Code/training_output_0.5_with_smoothed_ft_loss
 Code/filters
 Data_Root/
+Code/training_output_0.5_best/

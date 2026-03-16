@@ -191,11 +191,9 @@ def validate(model, image_loader, mtf_loader, l1_loss, alpha, device):
 
         I_smooth_fft = compute_fft(I_smooth_1)
         I_sharp_fft = compute_fft(I_sharp_1)
-        eps_A = 1e-6 * (torch.median(I_smooth_fft.real))
-        eps_B = 1e-6 * torch.median(I_sharp_fft.real)
         ft_loss = huber(
-            torch.log(I_smooth_fft.abs() + eps_A) - torch.log(I_sharp_fft.abs() + eps_B), 
-            torch.log(otf_smooth + eps_A) - torch.log(otf_sharp + eps_B)
+            torch.log(I_smooth_fft.abs() + 1e-7) - torch.log(I_sharp_fft.abs() + 1e-7), 
+            torch.log(otf_smooth + 1e-7) - torch.log(otf_sharp + 1e-7)
             )
 
         batch_loss = alpha * recon_loss + (1 - alpha) * mtf_loss + 0.5 * ft_loss
@@ -437,8 +435,11 @@ def get_torch_spline(knots, control_points, num_points=64):
     t_min = knots[:, degree].unsqueeze(1)
     t_max = knots[:, -degree-1].unsqueeze(1)
     t_range = torch.linspace(0, 1, num_points, device=knots.device).unsqueeze(0)
-    t = t_min + (t_max - t_min) * t_range
-    t = torch.clamp(t, min=t_min, max=t_max)
+    eps = 1e-5
+    t = t_min + (t_max - t_min - eps) * t_range 
+    t = torch.maximum(t, t_min)
+    t = torch.minimum(t, t_max - eps)
+
     n = control_points.shape[1]
     basis_values = []
     for i in range(n):

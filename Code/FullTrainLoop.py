@@ -88,7 +88,7 @@ def train_one_epoch(model, image_loader, mtf_loader, optimizer, scaler, l1_loss,
                 filter_sharp2smooth=filt_sh2s,
                 device=device
             )
-
+            
             recon_loss = (l1_loss(I_gen_sharp, I_sharp_1) + l1_loss(I_gen_smooth, I_smooth_2)) / 2.0
 
             knots_mtf, cp_mtf = model(input_profiles)
